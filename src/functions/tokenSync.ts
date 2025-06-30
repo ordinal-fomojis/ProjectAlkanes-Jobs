@@ -1,6 +1,6 @@
-import { app, InvocationContext, Timer } from "@azure/functions";
+import { app, InvocationContext, Timer } from "@azure/functions"
 
-export async function tokenSync(myTimer: Timer, context: InvocationContext): Promise<void> {
+export async function tokenSync(_: Timer, context: InvocationContext): Promise<void> {
   context.log('Timer function processed request.');
 }
 
