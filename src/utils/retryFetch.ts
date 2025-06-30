@@ -5,14 +5,14 @@ export const DEFAULT_RETRY_FETCH_TIMES = 4
 
 export class RequestError extends Error {
   constructor(public status: number, public text: string, public url: string) {
-    super(`Request failed with error ${status}: ${text}`)
+    super(`Request failed with error ${status.toString()}: ${text}`)
   }
 }
 
 interface RetryFetchOptions {
   retries?: number
-  retryCondition?: (error: unknown, base: () => boolean) => Promise<boolean>
-  delay?: (attempt: number, error: unknown, base: () => number) => Promise<number>
+  retryCondition?: (error: unknown, base: () => boolean) => Promise<boolean> | boolean
+  delay?: (attempt: number, error: unknown, base: () => number) => Promise<number> | number
 }
 
 export async function retryResponseFetch(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1], options: RetryFetchOptions = {}) {
@@ -55,7 +55,7 @@ export async function retryBufferFetch(input: Parameters<typeof fetch>[0], init?
   return await retryResponseFetch(input, init, options).then(x => x.arrayBuffer())
 }
 
-export async function retrySchemaFetch<T extends z.ZodTypeAny>(schema: T, ...args: Parameters<typeof retryJsonFetch>): Promise<z.infer<T>> {
+export async function retrySchemaFetch<Output, Def extends z.ZodTypeDef, Input>(schema: z.ZodType<Output, Def, Input>, ...args: Parameters<typeof retryJsonFetch>) {
   return await retryJsonFetch(...args).then(response => parse(schema, response))
 }
 

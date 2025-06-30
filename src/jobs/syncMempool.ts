@@ -16,7 +16,7 @@ export async function syncMempool(log: Logger) {
   const collection = database.getDb().collection<MempoolTransaction>('mempool_transactions')
 
   const mempoolTxIds = await getMempoolTransactionIds()
-  log.info(`Found ${mempoolTxIds.length} transactions in the mempool.`)
+  log.info(`Found ${mempoolTxIds.length.toString()} transactions in the mempool.`)
   const mempoolTxIdsSet = new Set(mempoolTxIds)
 
   const dbTxIds = (await collection.find().toArray()).map(tx => tx.txid)
@@ -29,7 +29,7 @@ export async function syncMempool(log: Logger) {
   if (txnsToDelete.length > 0) {
     await collection.deleteMany({ txid: { $in: txnsToDelete } })
   }
-  log.info(`Deleted ${txnsToDelete.length} transactions from the database.`)
+  log.info(`Deleted ${txnsToDelete.length.toString()} transactions from the database.`)
 
   const mempoolTransactions = newTxns.length === 0 ? [] : (
     await getRawTransactions(newTxns.slice(0, MAX_TXNS_PER_SYNC))).filter(x => x.success)
@@ -44,5 +44,5 @@ export async function syncMempool(log: Logger) {
   if (mempoolTransactions.length > 0) {
     await collection.insertMany(mempoolTransactions)
   }
-  log.info(`Inserted ${mempoolTransactions.length} new transactions into the database.`)
+  log.info(`Inserted ${mempoolTransactions.length.toString()} new transactions into the database.`)
 }

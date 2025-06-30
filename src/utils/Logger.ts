@@ -1,11 +1,11 @@
 import { InvocationContext } from "@azure/functions"
 
 export abstract class Logger {
-  abstract trace(message: string, ...args: any[]): void;
-  abstract debug(message: string, ...args: any[]): void;
-  abstract info(message: string, ...args: any[]): void;
-  abstract warn(message: string, ...args: any[]): void;
-  abstract error(message: string, ...args: any[]): void;
+  abstract trace(message: string, ...args: unknown[]): void;
+  abstract debug(message: string, ...args: unknown[]): void;
+  abstract info(message: string, ...args: unknown[]): void;
+  abstract warn(message: string, ...args: unknown[]): void;
+  abstract error(message: string, ...args: unknown[]): void;
 }
 
 export class ContextLogger extends Logger {
@@ -13,23 +13,23 @@ export class ContextLogger extends Logger {
     super()
   }
 
-  trace(message: string, ...args: any[]) {
+  trace(message: string, ...args: unknown[]) {
     this.context.trace(message, ...args)
   }
   
-  debug(message: string, ...args: any[]) {
+  debug(message: string, ...args: unknown[]) {
     this.context.debug(message, ...args)
   }
 
-  info(message: string, ...args: any[]) {
+  info(message: string, ...args: unknown[]) {
     this.context.info(message, ...args)
   }
 
-  warn(message: string, ...args: any[]) {
+  warn(message: string, ...args: unknown[]) {
     this.context.warn(message, ...args)
   }
 
-  error(message: string, ...args: any[]) {
+  error(message: string, ...args: unknown[]) {
     this.context.error(message, ...args)
   }
 }

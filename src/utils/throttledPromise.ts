@@ -56,8 +56,8 @@ async function throttledPromise<T extends readonly (() => unknown)[]>(promises: 
       const { promise, i } = todo.shift()!
       pending.push(promise)
       Promise.resolve(promise())
-        .then(result => onResolve(result, finished, i, reject))
-        .catch(error => onReject(error, finished, i, reject))
+        .then(result => { onResolve(result, finished, i, reject) })
+        .catch((error: unknown) => { onReject(error, finished, i, reject) })
         .finally(() => {
           const index = pending.indexOf(promise)
           pending.splice(index, 1)
