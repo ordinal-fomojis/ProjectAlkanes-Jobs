@@ -8,4 +8,5 @@ __queuestorage__
 local.settings.json
 test
 tsconfig.json
+vitest.config.ts
 .env.keys
