@@ -1,9 +1,24 @@
-import { ClientSession, Db, MongoClient, WithTransactionCallback } from 'mongodb'
+import { ClientSession, Collection, Db, MongoClient, WithTransactionCallback } from 'mongodb'
 import { CollectionName, DataBaseType } from './collections.js'
 
+type CollectionMap = { [C in CollectionName]?: Collection<DataBaseType[C]> }
+
 class Database {
-  private client: MongoClient | null = null;
-  private db: Db | null = null;
+  private client: MongoClient | null = null
+  private db: Db | null = null
+  private collections: CollectionMap = {}
+
+  get blockHeight() {
+    return this.collections.block_heights ??= this.getCollection(CollectionName.BlockHeight)
+  }
+
+  get alkaneToken() {
+    return this.collections.alkane_tokens ??= this.getCollection(CollectionName.AlkaneToken)
+  }
+
+  get mempoolTransaction() {
+    return this.collections.mempool_transactions ??= this.getCollection(CollectionName.MempoolTransaction)
+  }
 
   async connect(uri: string, dbName: string) {
     this.client ??= new MongoClient(uri)
@@ -12,14 +27,14 @@ class Database {
   }
 
   async disconnect() {
-    await this.client?.close();
+    await this.client?.close()
   }
 
   get isConnected(): boolean {
     return this.db != null
   }
 
-  getCollection<T extends CollectionName>(name: T) {
+  private getCollection<T extends CollectionName>(name: T) {
     if (this.db == null) {
       throw new Error('Database not connected. Call connect() first.');
     }

@@ -1,7 +1,6 @@
 import fs from 'fs'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { CollectionName } from '../../src/database/collections.js'
 import { database } from '../../src/database/database.js'
 import { syncMempool } from '../../src/jobs/syncMempool.js'
 import { DB_NAME } from '../../src/utils/constants.js'
@@ -38,20 +37,19 @@ describe('MempoolTransactionService', () => {
         params: [id]
       }))))
 
-      const collection = database.getCollection(CollectionName.MempoolTransaction)
-      await collection.deleteMany()
+      await database.mempoolTransaction.deleteMany()
 
       vi.mocked(getMempoolTransactionIds).mockResolvedValue(mempool ?? [])
 
       if (db != null) {
-        await collection.insertMany(db.map(txid => ({ txid })))
+        await database.mempoolTransaction.insertMany(db.map(txid => ({ txid })))
       }
 
-      return { collection, mempool }
+      return { mempool }
     }
 
     it('should add non existent transactions with correct mint ids', async () => {
-      const { collection, mempool } = await setup({
+      const { mempool } = await setup({
         mempool: [
           "5ade9ef39ddc3b0607ecd425ac201cf02df89898b1a28677605e6bb9a68ec93e",
           "138ba708c9024a720c2ba753e91e6c0c54c5eabc8c04c3ec62924420b2661fe0",
@@ -65,7 +63,7 @@ describe('MempoolTransactionService', () => {
       expect(getMempoolTransactionIds).toHaveBeenCalledOnce()
       expect(getRawTransactions).toHaveBeenCalledExactlyOnceWith(mempool)
 
-      const documents = await collection.find().sort({ txid: 'asc' }).toArray()
+      const documents = await database.mempoolTransaction.find().sort({ txid: 'asc' }).toArray()
       expect(documents).toHaveLength(3)
       expect(documents).toEqual([
         expect.objectContaining({
@@ -87,7 +85,7 @@ describe('MempoolTransactionService', () => {
         "138ba708c9024a720c2ba753e91e6c0c54c5eabc8c04c3ec62924420b2661fe0",
         "c1329565bb5787c7bd48644adfc1c3f86e6db479e8e7177feb082dba3708af12"
       ]
-      const { collection } = await setup({
+      await setup({
         mempool, db: mempool
       })
       
@@ -97,7 +95,7 @@ describe('MempoolTransactionService', () => {
       expect(getMempoolTransactionIds).toHaveBeenCalledOnce()
       expect(getRawTransactions).not.toHaveBeenCalled()
 
-      const documents = await collection.find().sort({ txid: 'asc' }).toArray()
+      const documents = await database.mempoolTransaction.find().sort({ txid: 'asc' }).toArray()
       expect(documents).toHaveLength(3)
       expect(documents).toEqual([
         expect.objectContaining({
@@ -122,7 +120,7 @@ describe('MempoolTransactionService', () => {
         "138ba708c9024a720c2ba753e91e6c0c54c5eabc8c04c3ec62924420b2661fe0",
         "c1329565bb5787c7bd48644adfc1c3f86e6db479e8e7177feb082dba3708af12"
       ]
-      const { collection } = await setup({ mempool, db })
+      await setup({ mempool, db })
       
       const result = await syncMempool(new MockLogger())
       
@@ -130,7 +128,7 @@ describe('MempoolTransactionService', () => {
       expect(getMempoolTransactionIds).toHaveBeenCalledOnce()
       expect(getRawTransactions).not.toHaveBeenCalled()
 
-      const documents = await collection.find().sort({ txid: 'asc' }).toArray()
+      const documents = await database.mempoolTransaction.find().sort({ txid: 'asc' }).toArray()
       expect(documents).toHaveLength(2)
       expect(documents).toEqual([
         expect.objectContaining({
@@ -148,7 +146,7 @@ describe('MempoolTransactionService', () => {
         "138ba708c9024a720c2ba753e91e6c0c54c5eabc8c04c3ec62924420b2661fe0",
         "c1329565bb5787c7bd48644adfc1c3f86e6db479e8e7177feb082dba3708af12"
       ]
-      const { collection } = await setup({ mempool })
+      await setup({ mempool })
       
       vi.mocked(getRawTransactions).mockResolvedValue([
         { success: true, params: ['5ade9ef39ddc3b0607ecd425ac201cf02df89898b1a28677605e6bb9a68ec93e'],
@@ -167,7 +165,7 @@ describe('MempoolTransactionService', () => {
       expect(getMempoolTransactionIds).toHaveBeenCalledOnce()
       expect(getRawTransactions).toHaveBeenCalledExactlyOnceWith(mempool)
 
-      const documents = await collection.find().sort({ txid: 'asc' }).toArray()
+      const documents = await database.mempoolTransaction.find().sort({ txid: 'asc' }).toArray()
       expect(documents).toHaveLength(2)
       expect(documents).toEqual([
         expect.objectContaining({
@@ -189,7 +187,7 @@ describe('MempoolTransactionService', () => {
         { txid: '5ade9ef39ddc3b0607ecd425ac201cf02df89898b1a28677605e6bb9a68ec93e', mintId: '2:21666' },
         { txid: 'c1329565bb5787c7bd48644adfc1c3f86e6db479e8e7177feb082dba3708af12' }
       ]
-      const { collection } = await setup({ mempool, db: db.map(tx => tx.txid) })
+      await setup({ mempool, db: db.map(tx => tx.txid) })
 
       const result = await syncMempool(new MockLogger())
 
@@ -198,7 +196,7 @@ describe('MempoolTransactionService', () => {
       expect(getRawTransactions)
         .toHaveBeenCalledExactlyOnceWith(["138ba708c9024a720c2ba753e91e6c0c54c5eabc8c04c3ec62924420b2661fe0"])
 
-      const documents = await collection.find().sort({ txid: 'asc' }).toArray()
+      const documents = await database.mempoolTransaction.find().sort({ txid: 'asc' }).toArray()
       expect(documents).toHaveLength(2)
       expect(documents).toEqual([
         expect.objectContaining({
