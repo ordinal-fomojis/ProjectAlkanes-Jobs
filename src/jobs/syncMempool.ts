@@ -1,5 +1,6 @@
 import { Transaction } from "bitcoinjs-lib"
-import { CollectionName, database } from "../config/database.js"
+import { CollectionName } from "../database/collections.js"
+import { database } from "../database/database.js"
 import { decodeAlkaneOpCallsInTransaction } from "../utils/decoder.js"
 import { Logger } from "../utils/Logger.js"
 import { getMempoolTransactionIds } from "../utils/rpc/getMempoolTransactionIds.js"

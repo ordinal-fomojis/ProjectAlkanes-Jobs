@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import z from "zod"
-import { BITCOIN_RPC_URL } from "../../../src/config/constants.js"
+import { BITCOIN_RPC_URL } from "../../../src/utils/constants.js"
 import { retrySchemaFetch } from "../../../src/utils/retryFetch.js"
 import { callRpc } from "../../../src/utils/rpc/callRpc.js"
 

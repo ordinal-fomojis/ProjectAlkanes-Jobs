@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import z from 'zod'
-import { ORDISCAN_API_KEY } from '../../../src/config/constants.js'
+import { ORDISCAN_API_KEY } from '../../../src/utils/constants.js'
 import { ordiscanFetch } from '../../../src/utils/ordiscan/ordiscanFetch.js'
 import { retrySchemaFetch } from '../../../src/utils/retryFetch.js'
 

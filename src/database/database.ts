@@ -1,18 +1,5 @@
 import { ClientSession, Db, MongoClient, WithTransactionCallback } from 'mongodb'
-
-export const CollectionName = {
-  MempoolTransaction: 'mempool_transactions'
-} as const
-type CollectionName = (typeof CollectionName)[keyof typeof CollectionName]
-
-export interface MempoolTransaction {
-  txid: string
-  mintId?: string
-}
-
-interface DataBaseType {
-  [CollectionName.MempoolTransaction]: MempoolTransaction
-}
+import { CollectionName, DataBaseType } from './collections.js'
 
 class Database {
   private client: MongoClient | null = null;
