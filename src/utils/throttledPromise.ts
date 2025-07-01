@@ -14,6 +14,13 @@ export async function throttledPromiseAll<T extends readonly (() => unknown)[]>(
   ) as PromiseAllReturn<T>
 }
 
+type PromiseSettledResult<T> = {
+    status: "fulfilled"
+    value: T
+} | {
+    status: "rejected"
+    reason: unknown
+}
 type PromiseAllSettledReturn<T extends readonly (() => unknown)[]> = Promise<{ readonly [P in keyof T]: PromiseSettledResult<Awaited<ReturnType<T[P]>>> }>
 export async function throttledPromiseAllSettled<T extends readonly (() => unknown)[]>(promises: T, options: ThrottledPromiseOptions = {}): PromiseAllSettledReturn<T> {
   return await throttledPromise(promises, options, 
@@ -34,7 +41,7 @@ export async function throttledPromiseAllSettled<T extends readonly (() => unkno
 
 type OnComplete = (result: unknown, finished: unknown[], index: number, reject: (reason: unknown) => void) => void
 
-async function throttledPromise<T extends readonly (() => unknown)[]>(promises: T, options: ThrottledPromiseOptions, onResolve: OnComplete, onReject: OnComplete) {
+async function throttledPromise(promises: readonly (() => unknown)[], options: ThrottledPromiseOptions, onResolve: OnComplete, onReject: OnComplete) {
   const limit = options.limit ?? DEFAULT_THROTTLE_LIMIT
   return new Promise((resolve, reject) => {
     const todo = promises.map((promise, i) => ({ promise, i }))
@@ -51,9 +58,11 @@ async function throttledPromise<T extends readonly (() => unknown)[]>(promises: 
         return false
       }
       if (pending.length >= limit) return false
-      if (todo.length === 0) return false
       
-      const { promise, i } = todo.shift()!
+      const item = todo.shift()
+      if (item == null) return false
+      
+      const { promise, i } = item
       pending.push(promise)
       Promise.resolve(promise())
         .then(result => { onResolve(result, finished, i, reject) })

@@ -4,5 +4,5 @@ import { ContextLogger } from "../utils/Logger.js"
 
 app.timer('syncMempool', {
   schedule: '0 */1 * * * *',
-  handler: (_, context) => syncMempool(new ContextLogger(context))
+  handler: async (_, context) => { await syncMempool(new ContextLogger(context)) }
 })

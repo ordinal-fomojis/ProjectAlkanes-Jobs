@@ -1,5 +1,5 @@
 import z from "zod"
-import { ORDISCAN_API_KEY } from "../../config/constants.js"
+import { ORDISCAN_API_KEY } from "../constants.js"
 import { retrySchemaFetch } from "../retryFetch.js"
 
 export async function ordiscanFetch<Output, Def extends z.ZodTypeDef, Input>(schema: z.ZodType<Output, Def, Input>, path: string, params: Record<string, string> = {}) {
