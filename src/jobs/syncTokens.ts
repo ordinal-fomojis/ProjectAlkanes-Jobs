@@ -16,11 +16,12 @@ export async function syncTokens(log: Logger) {
   const currentBlockHeight = await getBlockHeight()
   log.info(`Current block height: ${currentBlockHeight.toString()}`)
   
-  const { blocksSynced, tokensUnsynced } = await syncBlocks(lastSyncBlockHeight?.height ?? null, currentBlockHeight)
-  const { tokensFetched } = await fetchNewTokens(lastSyncBlockHeight, currentBlockHeight)
-  const { syncedTokens, failedToSync } = await syncAlkaneTokens(currentBlockHeight)
+  const { blocksSynced, tokensUnsynced } = await syncBlocks(log, lastSyncBlockHeight?.height ?? null, currentBlockHeight)
+  const { tokensFetched } = await fetchNewTokens(log, lastSyncBlockHeight, currentBlockHeight)
+  const { syncedTokens, failedToSync } = await syncAlkaneTokens(log, currentBlockHeight)
 
   if (lastSyncBlockHeight == null) {
+    log.info(`First sync. Inserting block height: ${currentBlockHeight.toString()}`)
     await database.blockHeight.insertOne({
       height: currentBlockHeight,
       synced: true,
@@ -39,7 +40,7 @@ export async function syncTokens(log: Logger) {
 
 // Fetches unsynced blocks. Each block successfully fetched and decoded is marked as synced,
 // and any tokens interacted with in the block are unsynced.
-async function syncBlocks(lastSyncHeight: number | null, currentHeight: number) {
+async function syncBlocks(log: Logger, lastSyncHeight: number | null, currentHeight: number) {
   // Unsynced blocks are all those since the last sync, and any marked as unsynced in the database
   const blocksSinceLastSync = lastSyncHeight == null ? []
     : Array.from({ length: currentHeight - lastSyncHeight }, (_, i) => i + lastSyncHeight + 1)
@@ -71,12 +72,14 @@ async function syncBlocks(lastSyncHeight: number | null, currentHeight: number) 
       { $set: { synced: false } }
     )
   })
+  log.info(`Synced ${blockResponses.length.toString()} blocks`)
+  log.info(`Unsynced ${tokenIds.size.toString()} tokens`)
   return { blocksSynced: blockResponses.length, tokensUnsynced: tokenIds.size }
 }
 
 // Fetch list of alkanes after the given timestamp, or all if no timestamp is provided,
 // and save them to the database as unsynced tokens.
-async function fetchNewTokens(lastSyncedBlock: BlockHeight | null, currentBlockHeight: number) {
+async function fetchNewTokens(log: Logger, lastSyncedBlock: BlockHeight | null, currentBlockHeight: number) {
   if (lastSyncedBlock?.height === currentBlockHeight) return { tokensFetched: 0 }
 
   const alkanes = await getAlkaneIdsAfterTimestamp(lastSyncedBlock?.timestamp ?? null)
@@ -93,17 +96,28 @@ async function fetchNewTokens(lastSyncedBlock: BlockHeight | null, currentBlockH
       upsert: true
     }
   })))
+  log.info(`Fetched and saved ${alkanes.length.toString()} new tokens`)
   return { tokensFetched: alkanes.length }
 }
 
 // Syncs all tokens marked as unsynced in the database.
-async function syncAlkaneTokens(currentBlockHeight: number) {
+async function syncAlkaneTokens(log: Logger, currentBlockHeight: number) {
   const unsyncedTokens = await database.alkaneToken.find({ synced: false })
     .sort({ blockSyncedAt: 'asc' })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
+  log.info(`Syncing ${unsyncedTokens.length.toString()} tokens`)
 
   const tokens = await getAlkaneTokens(unsyncedTokens.map(t => t.alkaneId))
   const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
+  log.info(`Successfully fetched ${successfulTokens.length.toString()} tokens`)
+  
+  const failedTokens = tokens.filter(r => r.status === 'rejected').map(r => r.reason)
+  if (failedTokens.length > 0) {
+    log.warn(`Failed to fetch ${failedTokens.length.toString()} tokens`)
+    for (const error of failedTokens) {
+      log.warn(`Failed to fetch token with error: `, error)
+    }
+  }
   
   if (successfulTokens.length === 0) return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
 
