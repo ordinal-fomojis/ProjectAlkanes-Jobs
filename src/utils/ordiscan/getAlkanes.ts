@@ -69,11 +69,9 @@ export async function getAlkaneTokens(alkaneIds: string[]) {
 export async function getAlkaneIdsAfterTimestamp(minTimestamp: Date | null) {
   const alkanes: AlkaneToken[] = []
   let page = 1
-  while (true) {
-    const result = await getPagedAlkaneIds(page)
-    if (result.length === 0) {
-      return alkanes
-    }
+  let result: AlkaneToken[] = []
+  do {
+    result = await getPagedAlkaneIds(page)
 
     for (const token of result) {
       if (minTimestamp == null || token.deployTimestamp == null || token.deployTimestamp >= minTimestamp) {
@@ -83,7 +81,9 @@ export async function getAlkaneIdsAfterTimestamp(minTimestamp: Date | null) {
       }
     }
     page++
-  }
+  } while(result.length !== 0)
+
+  return alkanes
 }
 
 async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {

@@ -19,11 +19,11 @@ export async function callMultiRpc<T extends z.ZodTypeAny, K extends readonly un
     error: z.any().nullish().optional()
   }))
   
-  const response = await callRpc(rpcSchema, 'sandshrew_multicall', params)
-  const responseList = response.map((response, index) => {
-    const [method, param] = params[index]!
-    if (response.result == null) {
-      const errorMessage = JSON.stringify(response.error ?? 'Unknown error')
+  const responses = await callRpc(rpcSchema, 'sandshrew_multicall', params)
+  const responseList = params.map(([method, param], index) => {
+    const response = responses[index]
+    if (response?.result == null) {
+      const errorMessage = JSON.stringify(response?.error ?? 'Unknown error')
       const error = new Error(`Bitcoin RPC error for ${method} with params ${JSON.stringify(param)}: ${errorMessage}`)
       return { success: false, error, params: param } as const
     }

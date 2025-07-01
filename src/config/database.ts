@@ -1,41 +1,42 @@
 import { ClientSession, Db, MongoClient, WithTransactionCallback } from 'mongodb'
 
+export const CollectionName = {
+  MempoolTransaction: 'mempool_transactions'
+} as const
+type CollectionName = (typeof CollectionName)[keyof typeof CollectionName]
+
+export interface MempoolTransaction {
+  txid: string
+  mintId?: string
+}
+
+interface DataBaseType {
+  [CollectionName.MempoolTransaction]: MempoolTransaction
+}
+
 class Database {
   private client: MongoClient | null = null;
   private db: Db | null = null;
 
   async connect(uri: string, dbName: string) {
-    try {
-      this.client ??= new MongoClient(uri)
-      await this.client.connect();
-      this.db = this.client.db(dbName);
-      console.log('✅ Connected to MongoDB');
-      console.log(`📊 Database: ${dbName}`);
-    } catch (error) {
-      console.error('❌ Failed to connect to MongoDB:', error);
-      throw error;
-    }
+    this.client ??= new MongoClient(uri)
+    await this.client.connect()
+    this.db = this.client.db(dbName)
   }
 
   async disconnect() {
-    try {
-      await this.client?.close();
-      console.log('🔌 Disconnected from MongoDB');
-    } catch (error) {
-      console.error('❌ Error disconnecting from MongoDB:', error);
-      throw error;
-    }
+    await this.client?.close();
   }
 
   get isConnected(): boolean {
     return this.db != null
   }
 
-  getDb(): Db {
+  getCollection<T extends CollectionName>(name: T) {
     if (this.db == null) {
       throw new Error('Database not connected. Call connect() first.');
     }
-    return this.db;
+    return this.db.collection<DataBaseType[T]>(name)
   }
 
   async withTransaction<T>(

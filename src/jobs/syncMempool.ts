@@ -1,5 +1,5 @@
 import { Transaction } from "bitcoinjs-lib"
-import { database } from "../config/database.js"
+import { CollectionName, database } from "../config/database.js"
 import { decodeAlkaneOpCallsInTransaction } from "../utils/decoder.js"
 import { Logger } from "../utils/Logger.js"
 import { getMempoolTransactionIds } from "../utils/rpc/getMempoolTransactionIds.js"
@@ -7,13 +7,8 @@ import { getRawTransactions } from "../utils/rpc/getRawTransactions.js"
 
 const MAX_TXNS_PER_SYNC = 2000
 
-interface MempoolTransaction {
-  txid: string
-  mintId?: string
-}
-
 export async function syncMempool(log: Logger) {
-  const collection = database.getDb().collection<MempoolTransaction>('mempool_transactions')
+  const collection = database.getCollection(CollectionName.MempoolTransaction)
 
   const mempoolTxIds = await getMempoolTransactionIds()
   log.info(`Found ${mempoolTxIds.length.toString()} transactions in the mempool.`)
@@ -45,4 +40,9 @@ export async function syncMempool(log: Logger) {
     await collection.insertMany(mempoolTransactions)
   }
   log.info(`Inserted ${mempoolTransactions.length.toString()} new transactions into the database.`)
+
+  return {
+    deletedCount: txnsToDelete.length,
+    createdCount: mempoolTransactions.length
+  }
 }

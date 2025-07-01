@@ -5,9 +5,8 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
   globalIgnores(['dist']),
   js.configs.recommended,
-  tseslint.configs.recommendedTypeChecked,
   tseslint.configs.stylisticTypeChecked,
-  // tseslint.configs.strictTypeChecked,
+  tseslint.configs.strictTypeChecked,
   {
     languageOptions: {
       parserOptions: {
