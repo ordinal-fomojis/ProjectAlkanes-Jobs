@@ -1,5 +1,6 @@
 import { BlockHeight } from "../database/collections.js"
 import { database } from "../database/database.js"
+import { syncPendingMints } from "../database/syncPendingMints.js"
 import { decodeAlkaneOpCallsInBlock } from "../utils/decoder.js"
 import { Logger } from "../utils/Logger.js"
 import { getAlkaneIdsAfterTimestamp, getAlkaneTokens } from "../utils/ordiscan/getAlkanes.js"
@@ -7,8 +8,8 @@ import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
 import { getBlockTimestamp } from "../utils/rpc/getBlockTimestamp.js"
 import { getRawBlocks } from "../utils/rpc/getRawBlocks.js"
 
-const MAX_TOKENS_PER_SYNC = 200
-const MAX_BLOCKS_PER_SYNC = 3
+const MAX_TOKENS_PER_SYNC = 50
+const MAX_BLOCKS_PER_BATCH = 3
 
 export async function syncTokens(log: Logger) {
   const lastSyncBlockHeight = await database.blockHeight.find().sort({ height: 'desc' }).limit(1).next()
@@ -45,36 +46,41 @@ async function syncBlocks(log: Logger, lastSyncHeight: number | null, currentHei
   const blocksSinceLastSync = lastSyncHeight == null ? []
     : Array.from({ length: currentHeight - lastSyncHeight }, (_, i) => i + lastSyncHeight + 1)
   const unsyncedBlocks = (await database.blockHeight.find({ synced: false }).toArray())
-    .map(b => b.height).concat(blocksSinceLastSync).slice(0, MAX_BLOCKS_PER_SYNC)
+    .map(b => b.height).concat(blocksSinceLastSync).slice(0, MAX_BLOCKS_PER_BATCH)
 
   if (unsyncedBlocks.length === 0) return { blocksSynced: 0, tokensUnsynced: 0 }
 
-  const blockResponses = await getRawBlocks(unsyncedBlocks)
-  const tokenIds = new Set(blockResponses.filter(b => b.success)
-    .flatMap(b => decodeAlkaneOpCallsInBlock(b.response))
-    .flatMap(b => b.opcalls.map(o => o.alkaneId)))
-  
-  await database.withTransaction(async () => {    
-    await database.blockHeight.bulkWrite(blockResponses.map(b => ({
-      updateOne: {
-        filter: { height: b.height },
-        update: { $set: {
-          height: b.height,
-          timestamp: b.success ? new Date(b.response.timestamp * 1000) : new Date(0),
-          synced: b.success
-        } },
-        upsert: true
-      }
-    })))
+  let unsyncedTokenCount = 0
+  for (let i = 0; i < unsyncedBlocks.length; i += MAX_BLOCKS_PER_BATCH) {
+    const blockResponses = await getRawBlocks(unsyncedBlocks.slice(i, i + MAX_BLOCKS_PER_BATCH))
+    const tokenIds = new Set(blockResponses.filter(b => b.success)
+      .flatMap(b => decodeAlkaneOpCallsInBlock(b.response))
+      .flatMap(b => b.opcalls.map(o => o.alkaneId)))
+    
+    await database.withTransaction(async () => {    
+      await database.blockHeight.bulkWrite(blockResponses.map(b => ({
+        updateOne: {
+          filter: { height: b.height },
+          update: { $set: {
+            height: b.height,
+            timestamp: b.success ? new Date(b.response.timestamp * 1000) : new Date(0),
+            synced: b.success
+          } },
+          upsert: true
+        }
+      })))
 
-    await database.alkaneToken.updateMany(
-      { alkaneId: { $in: Array.from(tokenIds) } },
-      { $set: { synced: false } }
-    )
-  })
-  log.info(`Synced ${blockResponses.length.toString()} blocks`)
-  log.info(`Unsynced ${tokenIds.size.toString()} tokens`)
-  return { blocksSynced: blockResponses.length, tokensUnsynced: tokenIds.size }
+      await database.alkaneToken.updateMany(
+        { alkaneId: { $in: Array.from(tokenIds) } },
+        { $set: { synced: false } }
+      )
+    })
+    log.info(`Synced ${blockResponses.length.toString()} blocks`)
+    log.info(`Unsynced ${tokenIds.size.toString()} tokens`)
+    unsyncedTokenCount += tokenIds.size
+  }
+
+  return { blocksSynced: unsyncedBlocks.length, tokensUnsynced: unsyncedTokenCount }
 }
 
 // Fetch list of alkanes after the given timestamp, or all if no timestamp is provided,
@@ -85,17 +91,20 @@ async function fetchNewTokens(log: Logger, lastSyncedBlock: BlockHeight | null, 
   const alkanes = await getAlkaneIdsAfterTimestamp(lastSyncedBlock?.timestamp ?? null)
   if (alkanes.length === 0) return { tokensFetched: 0 }
 
-  await database.alkaneToken.bulkWrite(alkanes.map(token => ({
-    updateOne: {
-      filter: { alkaneId: token.alkaneId },
-      update: { $setOnInsert: {
-        ...token,
-        synced: false,
-        blockSyncedAt: 0
-      } },
-      upsert: true
-    }
-  })))
+  await database.withTransaction(async () => {
+    await database.alkaneToken.bulkWrite(alkanes.map(token => ({
+      updateOne: {
+        filter: { alkaneId: token.alkaneId },
+        update: { $setOnInsert: {
+          ...token,
+          synced: false,
+          blockSyncedAt: 0
+        } },
+        upsert: true
+      }
+    })))
+    await syncPendingMints({ alkaneId: { $in: alkanes.map(x => x.alkaneId) } })
+  })
   log.info(`Fetched and saved ${alkanes.length.toString()} new tokens`)
   return { tokensFetched: alkanes.length }
 }

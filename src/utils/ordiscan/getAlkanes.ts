@@ -1,22 +1,7 @@
 import z from "zod"
+import { AlkaneToken } from "../../database/collections.js"
 import { throttledPromiseAllSettled } from "../throttledPromise.js"
 import { ordiscanFetch } from "./ordiscanFetch.js"
-
-interface AlkaneToken {
-  alkaneId: string
-  name: string | null
-  symbol: string | null
-  logoUrl: string | null
-  preminedSupply: number
-  amountPerMint: number | null
-  mintCountCap: number | null
-  currentSupply: number
-  currentMintCount: number
-  deployTxid: string | null
-  deployTimestamp: Date | null
-  synced: boolean
-  blockSyncedAt: number
-}
 
 const BaseAlkanesSchema = z.object({
   id: z.string(),
