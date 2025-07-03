@@ -66,4 +66,3 @@ jobs:
       uses: Azure/functions-action@v1
       with:
         app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
-        sku: flexconsumption
