@@ -46,12 +46,25 @@ jobs:
 
     - name: Build Project
       run: |
-        npm install
+        npm install 
         npm run build
+        npm prune --omit=dev
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false
+
+    - name: Get Terrform Outputs
+      id: tf-outputs
+      run: |
+        terraform init -backend-config="key=terraform-${{ env.ENVIRONMENT }}.tfstate"
+        echo "function_app_name=$(terraform output -raw function_app_name)" >> $GITHUB_OUTPUT
+      working-directory: terraform
 
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
       id: fa
       with:
-        app-name: alkanes-functionapp-${{ env.ENVIRONMENT }}
+        app-name: ${{ steps.tf-outputs.outputs.rg_name }}
         sku: flexconsumption
