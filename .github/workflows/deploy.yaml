@@ -50,6 +50,12 @@ jobs:
         npm run build
         npm prune --omit=dev
 
+    - name: Checkout Terraform
+      uses: actions/checkout@v3
+      with:
+        repository: 'ordinal-fomojis/ProjectAlkanes-IAC'
+        path: 'terraform'
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -60,7 +66,12 @@ jobs:
       run: |
         terraform init -backend-config="key=alkanes-${{ env.ENVIRONMENT }}.tfstate"
         echo "function_app_name=$(terraform output -raw function_app_name)" >> $GITHUB_OUTPUT
-
+      working-directory: terraform
+    
+    - name: Clean Up Terraform
+      run: |
+        rm -rf terraform
+        
     - name: Deploy Function App
       uses: Azure/functions-action@v1
       with:
