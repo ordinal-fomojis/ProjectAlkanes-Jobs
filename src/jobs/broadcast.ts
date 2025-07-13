@@ -36,6 +36,10 @@ interface HandleUnconfirmedArgs {
 }
 
 async function handleUnconfirmed({ log, transactions, unconfirmedUpdates } : HandleUnconfirmedArgs): Promise<ConfirmedTransaction[]> {
+  if (transactions.length === 0) {
+    log.info('No transactions to check for confirmations.')
+    return []
+  }
   log.info(`Checking ${transactions.length.toString()} broadcasted transactions, to check if they are confirmed.`)
   const confirmations = await getTransactionConfirmations(transactions.filter(tx => !tx.mock).map(x => x.txid))
   
@@ -95,6 +99,10 @@ interface HandleBroadcastsArgs {
 }
 
 async function handleBroadcasts({ log, transactions, unconfirmedUpdates, blockHeight } : HandleBroadcastsArgs) {
+  if (transactions.length === 0) {
+    log.info('No transactions to broadcast.')
+    return
+  }
   log.info(`Attempting to broadcast ${transactions.length.toString()} transactions.`)
 
   const transactionBatches: string[][] = []
@@ -109,17 +117,17 @@ async function handleBroadcasts({ log, transactions, unconfirmedUpdates, blockHe
   const processedTransactions = new Set<string>()
   const remainingTransactions = allTxIds
   while (remainingTransactions.size > 0) {
-    const latestBatch: string[] = []
+    const latestBatch = new Set<string>()
     for (const txid of remainingTransactions) {
       const dependentTxids = dependentTxidsMap.get(txid) ?? []
       
-      if (dependentTxids.every(dep => processedTransactions.has(dep))) {
-        latestBatch.push(txid)
+      if (dependentTxids.every(dep => processedTransactions.has(dep) && !latestBatch.has(dep))) {
+        latestBatch.add(txid)
         processedTransactions.add(txid)
         remainingTransactions.delete(txid)
       }
     }
-    transactionBatches.push(latestBatch)
+    transactionBatches.push(Array.from(latestBatch))
   }
 
   const transactionMap = new Map(transactions.map(tx => [tx.txid, tx]))
