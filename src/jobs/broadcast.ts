@@ -21,9 +21,14 @@ export async function broadcast(log: Logger) {
   await handleBroadcasts({ log, transactions: unbroadcasted, unconfirmedUpdates, blockHeight })
   const confirmedTxns = await handleUnconfirmed({ log, transactions: broadcasted, unconfirmedUpdates })
   
+  const unconfirmedUpdatesFlat = unconfirmedUpdates.flat()
   await database.withTransaction(async session => {
-    await database.unconfirmedTransaction.bulkWrite(unconfirmedUpdates.flat(), session)
-    await database.confirmedTransaction.insertMany(confirmedTxns, session)
+    if (unconfirmedUpdatesFlat.length > 0) {
+      await database.unconfirmedTransaction.bulkWrite(unconfirmedUpdatesFlat, session)
+    }
+    if (confirmedTxns.length > 0) {
+      await database.confirmedTransaction.insertMany(confirmedTxns, session)
+    }
   })
 
   log.info('Successfully finished broadcast job')
