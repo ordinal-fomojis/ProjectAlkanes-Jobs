@@ -44,7 +44,7 @@ async function handleUnconfirmed({ log, transactions, unconfirmedUpdates } : Han
   const confirmations = await getTransactionConfirmations(transactions.filter(tx => !tx.mock).map(x => x.txid))
   
   const unbroadcasted = confirmations.filter(x => !x.broadcasted).map(x => x.txid)
-  const mined = confirmations.filter(x => x.broadcasted && x.confirmations > 0).map(x => x.txid)
+  const mined = confirmations.filter(x => x.broadcasted && x.confirmations > 0 && x.confirmations < 6).map(x => x.txid)
   const confirmed = confirmations.filter(x => x.broadcasted && x.confirmations >= 6).map(x => x.txid)
   const mocked = transactions.filter(tx => tx.mock).map(tx => tx.txid)
 
