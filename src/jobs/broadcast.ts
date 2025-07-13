@@ -55,13 +55,13 @@ async function handleUnconfirmed({ log, transactions, unconfirmedUpdates } : Han
     {
       updateMany: {
         filter: { txid: { $in: unbroadcasted } },
-        update: { $set: { broadcasted: false, mined: false, broadcastFailedAtHeight: null, error: null } }
+        update: { $set: { broadcasted: false, mined: false, broadcastFailedAtHeight: null, broadcastError: null } }
       }
     },
     {
       updateMany: {
         filter: { txid: { $in: mined } },
-        update: { $set: { broadcasted: true, mined: true, broadcastFailedAtHeight: null, error: null } }
+        update: { $set: { broadcasted: true, mined: true, broadcastFailedAtHeight: null, broadcastError: null } }
       }
     },
     {
@@ -153,7 +153,7 @@ async function handleBroadcasts({ log, transactions, unconfirmedUpdates, blockHe
         filter: { txid },
         update: { $set: {
           broadcastFailedAtHeight: blockHeight,
-          error: response?.success === false ? response.error.message : "Unknown error",
+          broadcastError: response?.success === false ? response.error.message : "Unknown error",
           broadcasted: false,
           mined: false
         } }
@@ -165,8 +165,8 @@ async function handleBroadcasts({ log, transactions, unconfirmedUpdates, blockHe
   log.info(`Successfully broadcasted ${successfulBroadcasts.length.toString()} transactions.`)
   unconfirmedUpdates.push([{
     updateMany: {
-      filter: { txid: { in: successfulBroadcasts.concat(alreadyBroadcasted) } },
-      update: { $set: { broadcasted: true, mined: false, broadcastFailedAtHeight: null, error: null } }
+      filter: { txid: { $in: successfulBroadcasts.concat(alreadyBroadcasted) } },
+      update: { $set: { broadcasted: true, mined: false, broadcastFailedAtHeight: null, broadcastError: null } }
     }
   }])
 }
