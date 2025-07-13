@@ -1,3 +1,5 @@
+import { ObjectId } from "mongodb"
+
 export interface MempoolTransaction {
   txid: string
   mintId?: string
@@ -26,10 +28,36 @@ export interface BlockHeight {
   timestamp: Date
 }
 
+export interface UnconfirmedTransaction {
+  wif?: string
+  txid: string
+  txHex: string
+  broadcastFailedAtHeight: number | null
+  broadcastError: string | null
+  broadcasted: boolean
+  // A transaction is mined if it is in a confirmed block.
+  // It is confirmed after it has six or more confirmations (after which it will no longer be in this dataset).
+  mined: boolean
+  mock: boolean
+  mintTx?: ObjectId
+  created: Date
+}
+
+export interface ConfirmedTransaction {
+  wif?: string
+  txid: string
+  txHex: string
+  mock: boolean
+  mintTx?: ObjectId
+  created: Date
+}
+
 export const CollectionName = {
   MempoolTransaction: 'mempool_transactions',
   AlkaneToken: 'alkane_tokens',
-  BlockHeight: 'block_heights'
+  BlockHeight: 'block_heights',
+  UnconfirmedTransaction: 'unconfirmed_transactions',
+  ConfirmedTransaction: 'confirmed_transactions',
 } as const
 export type CollectionName = (typeof CollectionName)[keyof typeof CollectionName]
 
@@ -37,4 +65,6 @@ export interface DataBaseType {
   [CollectionName.MempoolTransaction]: MempoolTransaction
   [CollectionName.AlkaneToken]: AlkaneToken
   [CollectionName.BlockHeight]: BlockHeight
+  [CollectionName.UnconfirmedTransaction]: UnconfirmedTransaction
+  [CollectionName.ConfirmedTransaction]: ConfirmedTransaction
 }

@@ -6,8 +6,6 @@ import { Logger } from "../utils/Logger.js"
 import { getMempoolTransactionIds } from "../utils/rpc/getMempoolTransactionIds.js"
 import { getRawTransactions } from "../utils/rpc/getRawTransactions.js"
 
-const MAX_TXNS_PER_SYNC = 2000
-
 export async function syncMempool(log: Logger) {
   const mempoolTxIds = await getMempoolTransactionIds()
   log.info(`Found ${mempoolTxIds.length.toString()} transactions in the mempool.`)
@@ -21,7 +19,7 @@ export async function syncMempool(log: Logger) {
   const txnsToDelete = dbTxns.filter(txn => !mempoolTxIdsSet.has(txn.txid))
 
   const mempoolTransactions = newTxns.length === 0 ? [] : (
-    await getRawTransactions(newTxns.slice(0, MAX_TXNS_PER_SYNC))).filter(x => x.success)
+    await getRawTransactions(newTxns)).filter(x => x.success)
       .map(x => {
         const tx = Transaction.fromHex(x.response)
         const mintId = decodeAlkaneOpCallsInTransaction(tx).find(call => call.opcode === 77)?.alkaneId

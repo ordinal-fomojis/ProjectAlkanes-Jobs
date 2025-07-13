@@ -27,8 +27,8 @@ export async function getRawBlocks(heights: number[]): Promise<GetRawBlocksRespo
       throw new Error(`Block height not found for hash ${response.params[0]}`)
     
     return response.success
-    ? { ...response, height: height, response: Block.fromHex(response.response) }
-    : { ...response, height: height }
+      ? { ...response, height: height, response: Block.fromHex(response.response) }
+      : { ...response, height: height }
   })
 
   return failedHashes.concat(rawBlocks)

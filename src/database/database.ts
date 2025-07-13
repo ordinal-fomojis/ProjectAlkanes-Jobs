@@ -20,6 +20,14 @@ class Database {
     return this.collections.mempool_transactions ??= this.getCollection(CollectionName.MempoolTransaction)
   }
 
+  get unconfirmedTransaction() {
+    return this.collections.unconfirmed_transactions ??= this.getCollection(CollectionName.UnconfirmedTransaction)
+  }
+
+  get confirmedTransaction() {
+    return this.collections.confirmed_transactions ??= this.getCollection(CollectionName.ConfirmedTransaction)
+  }
+
   async connect(uri: string, dbName: string) {
     this.client ??= new MongoClient(uri)
     await this.client.connect()
