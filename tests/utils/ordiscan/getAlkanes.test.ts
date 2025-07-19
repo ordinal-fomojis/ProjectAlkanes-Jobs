@@ -6,27 +6,25 @@ import { ordiscanFetch } from '../../../src/utils/ordiscan/ordiscanFetch.js'
 vi.mock('../../../src/utils/ordiscan/ordiscanFetch.js')
 
 describe('getAlkaneTokens', () => {
-  it('should throttle to 100 requests per minute', async () => {
+  it('should return correct data', async () => {
     const token = {
       id: '2:1',
       name: 'Test Alkane',
       symbol: 'TALK',
       logo_url: 'https://example.com/logo.png',
-      premined_supply: '1000',
-      amount_per_mint: '10',
+      premined_supply: '100000000',
+      amount_per_mint: '10000000',
       mint_count_cap: '100',
       deploy_txid: 'tx123',
       deploy_timestamp: '2025-01-01T00:00:00Z',
-      current_supply: '500',
-      current_mint_count: 50
+      current_supply: '150000000',
+      current_mint_count: 5
     }
     vi.mocked(ordiscanFetch).mockResolvedValue(token)
 
-    const alkaneIds = Array.from({ length: 5 }, (_, i) => `2:${(i + 1).toString()}`)
-    const start = performance.now()
-    const result = await getAlkaneTokens(alkaneIds)
+    const alkaneIds = Array.from({ length: 5 }, (_, i) => ({ alkaneId: `2:${(i + 1).toString()}`, clonedFrom: null }))
+    const result = await getAlkaneTokens(alkaneIds, 100000)
     
-    expect(performance.now() - start).toBeGreaterThanOrEqual(2500)
     expect(result.every(r => r.status === 'fulfilled')).toBe(true)
     const data = result.filter(r => r.status === 'fulfilled').map(r => r.value)
     expect(data).toEqual(Array(5).fill({
@@ -34,15 +32,19 @@ describe('getAlkaneTokens', () => {
       name: 'Test Alkane',
       symbol: 'TALK',
       logoUrl: 'https://example.com/logo.png',
-      preminedSupply: 1000,
-      amountPerMint: 10,
-      mintCountCap: 100,
+      preminedSupply: "1",
+      amountPerMint: "0.1",
+      mintCountCap: "100",
       deployTxid: 'tx123',
       deployTimestamp: expect.any(Date),
-      currentSupply: 500,
-      currentMintCount: 50,
+      currentSupply: "1.5",
+      currentMintCount: 5,
+      percentageMinted: 5,
+      mintedOut: false,
+      maxSupply: "11",
       synced: true,
-      blockSyncedAt: 0
+      blockSyncedAt: 100000,
+      clonedFrom: null
     }))
   })
 })

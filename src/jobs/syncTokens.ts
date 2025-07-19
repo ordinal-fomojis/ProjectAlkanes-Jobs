@@ -116,7 +116,7 @@ async function syncAlkaneTokens(log: Logger, currentBlockHeight: number) {
     .limit(MAX_TOKENS_PER_SYNC).toArray()
   log.info(`Syncing ${unsyncedTokens.length.toString()} tokens`)
 
-  const tokens = await getAlkaneTokens(unsyncedTokens.map(t => t.alkaneId))
+  const tokens = await getAlkaneTokens(unsyncedTokens, currentBlockHeight)
   const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
   log.info(`Successfully fetched ${successfulTokens.length.toString()} tokens`)
   
@@ -133,11 +133,7 @@ async function syncAlkaneTokens(log: Logger, currentBlockHeight: number) {
   await database.alkaneToken.bulkWrite(successfulTokens.map(token => ({
     updateOne: {
       filter: { alkaneId: token.alkaneId },
-      update: { $set: {
-        ...token,
-        synced: true,
-        blockSyncedAt: currentBlockHeight
-      } },
+      update: { $set: token },
       upsert: true
     }
   })))

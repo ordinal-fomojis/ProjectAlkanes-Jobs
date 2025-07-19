@@ -38,4 +38,15 @@ describe('ordiscanFetch', () => {
     await expect(ordiscanFetch(z.object({ id: z.string() }), 'inscriptions/detail'))
       .rejects.toThrow('Ordiscan error: "Unknown error"')
   })
+
+  it('should rate limit to 100 requests per minute', async () => {
+    const data = { id: '123' }
+    vi.mocked(retrySchemaFetch).mockResolvedValue({ data })
+    const start = performance.now()
+
+    await Promise.all(Array.from({ length: 5 }, () =>
+      ordiscanFetch(z.object({ id: z.string() }), 'inscriptions/detail', { id: '123456' })
+    ))
+    expect(performance.now() - start).toBeGreaterThanOrEqual(2400)
+  })
 })

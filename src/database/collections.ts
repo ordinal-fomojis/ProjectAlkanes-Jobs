@@ -10,15 +10,19 @@ export interface AlkaneToken {
   name: string | null
   symbol: string | null
   logoUrl: string | null
-  preminedSupply: number
-  amountPerMint: number | null
-  mintCountCap: number | null
-  currentSupply: number
+  preminedSupply: string
+  amountPerMint: string | null
+  mintCountCap: string | null
+  currentSupply: string
   currentMintCount: number
   deployTxid: string | null
   deployTimestamp: Date | null
   synced: boolean
   blockSyncedAt: number
+  clonedFrom: string | null
+  percentageMinted: number | null
+  maxSupply: string | null
+  mintedOut: boolean
 }
 
 export interface BlockHeight {
