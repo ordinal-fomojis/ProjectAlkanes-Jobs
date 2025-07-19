@@ -53,7 +53,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       currentSupply: toAlkaneValue(token.current_supply).stripTrailingZero().getValue(),
       mintCountCap: token.mint_count_cap,
       currentMintCount: token.current_mint_count,
-      mintedOut: token.mint_count_cap == null || (BigInt(token.current_mint_count) >= BigInt(token.mint_count_cap)),
+      mintedOut: token.mint_count_cap != null && (BigInt(token.current_mint_count) >= BigInt(token.mint_count_cap)),
       deployTxid: token.deploy_txid,
       synced: true,
       blockSyncedAt: blockHeight,
