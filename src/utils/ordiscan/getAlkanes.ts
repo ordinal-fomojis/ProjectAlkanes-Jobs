@@ -1,7 +1,10 @@
+import { bigDecimal } from 'js-big-decimal'
 import z from "zod"
 import { AlkaneToken } from "../../database/collections.js"
 import { throttledPromiseAllSettled } from "../throttledPromise.js"
 import { ordiscanFetch } from "./ordiscanFetch.js"
+
+const UNSYNCED_FACTORY_CLONE_ID = "UNKNOWN"
 
 const BaseAlkanesSchema = z.object({
   id: z.string(),
@@ -20,32 +23,41 @@ const FullAlkanesSchema = BaseAlkanesSchema.extend({
   current_mint_count: z.number()
 })
 
-const RATE_LIMIT = 100 // requests per minute
+export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'clonedFrom'>[], blockHeight: number) {
+  return await throttledPromiseAllSettled(tokens.map(existingToken => async () => {
+    const token = await ordiscanFetch(FullAlkanesSchema, `alkane/${existingToken.alkaneId}`)
+    const factoryClone = existingToken.clonedFrom === UNSYNCED_FACTORY_CLONE_ID
+      ? (token.deploy_txid == null ? null : await getAlkaneFactoryClone(token.deploy_txid))
+      : existingToken.clonedFrom
 
-export async function getAlkaneTokens(alkaneIds: string[]) {
-  const start = performance.now()
-  return await throttledPromiseAllSettled(alkaneIds.map((id, i) => async () => {
-    const allowedToStartAt = start + (i * (60000 / RATE_LIMIT)) * 1.1
-    const timeTilStart = allowedToStartAt - performance.now()
-    if (timeTilStart > 0) {
-      await new Promise(r => setTimeout(r, timeTilStart))
-    }
-    
-    const token = await ordiscanFetch(FullAlkanesSchema, `alkane/${id}`)
+    const preminedSupply = toAlkaneValue(token.premined_supply)
+    const amountPerMint = token.amount_per_mint == null ? null : toAlkaneValue(token.amount_per_mint)
+
+    const mintCountCap = token.mint_count_cap == null ? null : new bigDecimal(token.mint_count_cap)
+
+    const maxSupply = mintCountCap == null ? null
+      : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
+    const percentageMinted = mintCountCap == null || mintCountCap == new bigDecimal(0) ? null
+      : new bigDecimal(100 * token.current_mint_count).divide(mintCountCap)
+
     const alkane: AlkaneToken = {
       alkaneId: token.id,
       name: token.name,
       symbol: token.symbol,
       logoUrl: token.logo_url,
-      preminedSupply: parseInt(token.premined_supply),
-      amountPerMint: token.amount_per_mint == null ? null : parseInt(token.amount_per_mint),
-      mintCountCap: token.mint_count_cap == null ? null : parseInt(token.mint_count_cap),
-      deployTxid: token.deploy_txid,
-      currentSupply: parseInt(token.current_supply),
+      preminedSupply: preminedSupply.stripTrailingZero().getValue(),
+      amountPerMint: amountPerMint?.stripTrailingZero().getValue() ?? null,
+      maxSupply: maxSupply?.stripTrailingZero().getValue() ?? null,
+      currentSupply: toAlkaneValue(token.current_supply).stripTrailingZero().getValue(),
+      mintCountCap: token.mint_count_cap,
       currentMintCount: token.current_mint_count,
+      mintedOut: token.mint_count_cap == null || (BigInt(token.current_mint_count) >= BigInt(token.mint_count_cap)),
+      deployTxid: token.deploy_txid,
       synced: true,
-      blockSyncedAt: 0,
-      deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp)
+      blockSyncedAt: blockHeight,
+      deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp),
+      clonedFrom: factoryClone,
+      percentageMinted: percentageMinted == null ? null : parseFloat(percentageMinted.getValue())
     }
     return alkane
   }))
@@ -76,19 +88,51 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
     sort: 'newest',
     type: 'TOKEN',
     page: page.toString()
-  })).map(a => ({
-    alkaneId: a.id,
-    name: a.name,
-    symbol: a.symbol,
-    logoUrl: a.logo_url,
-    preminedSupply: parseInt(a.premined_supply),
-    amountPerMint: a.amount_per_mint == null ? null : parseInt(a.amount_per_mint),
-    mintCountCap: a.mint_count_cap == null ? null : parseInt(a.mint_count_cap),
-    deployTxid: a.deploy_txid,
-    currentSupply: 0,
-    currentMintCount: 0,
-    synced: false,
-    blockSyncedAt: 0,
-    deployTimestamp: a.deploy_timestamp == null ? null : new Date(a.deploy_timestamp)
+  })).map(token => {
+    const preminedSupply = toAlkaneValue(token.premined_supply)
+    const amountPerMint = token.amount_per_mint == null ? null : toAlkaneValue(token.amount_per_mint)
+
+    const mintCountCap = token.mint_count_cap == null ? null : new bigDecimal(token.mint_count_cap)
+
+    const maxSupply = mintCountCap == null ? null
+      : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
+
+    return {
+      alkaneId: token.id,
+      name: token.name,
+      symbol: token.symbol,
+      logoUrl: token.logo_url,
+      preminedSupply: preminedSupply.stripTrailingZero().getValue(),
+      amountPerMint: amountPerMint?.stripTrailingZero().getValue() ?? null,
+      maxSupply: maxSupply?.stripTrailingZero().getValue() ?? null,
+      currentSupply: "0",
+      mintCountCap: token.mint_count_cap,
+      currentMintCount: 0,
+      mintedOut: true,
+      deployTxid: token.deploy_txid,
+      synced: false,
+      blockSyncedAt: 0,
+      deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp),
+      clonedFrom: UNSYNCED_FACTORY_CLONE_ID,
+      percentageMinted: null
+    }
+  })
+}
+
+const AlkaneTxSchema = z.object({
+  protostones: z.array(z.object({
+    type: z.string(),
+    alkaneId: z.string().nullable().optional()
   }))
+})
+
+async function getAlkaneFactoryClone(txid: string) {
+  const { protostones } = await ordiscanFetch(AlkaneTxSchema, `tx/${txid}/alkanes`)
+  const factoryClone = protostones.find(p => p.type === 'FACTORY_CLONE')
+  return factoryClone?.alkaneId ?? null
+}
+
+const DIVISOR = new bigDecimal(100_000_000)
+function toAlkaneValue(val: string | number) {
+  return new bigDecimal(val).divide(DIVISOR, 8)
 }
