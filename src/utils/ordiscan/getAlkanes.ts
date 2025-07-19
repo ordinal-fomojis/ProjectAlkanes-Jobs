@@ -23,6 +23,8 @@ const FullAlkanesSchema = BaseAlkanesSchema.extend({
   current_mint_count: z.number()
 })
 
+const ZERO = new bigDecimal(0)
+
 export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'clonedFrom'>[], blockHeight: number) {
   return await throttledPromiseAllSettled(tokens.map(existingToken => async () => {
     const token = await ordiscanFetch(FullAlkanesSchema, `alkane/${existingToken.alkaneId}`)
@@ -37,7 +39,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
 
     const maxSupply = mintCountCap == null ? null
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
-    const percentageMinted = mintCountCap == null || mintCountCap == new bigDecimal(0) ? null
+    const percentageMinted = mintCountCap == null || mintCountCap.compareTo(ZERO) === 0 ? null
       : new bigDecimal(100 * token.current_mint_count).divide(mintCountCap)
 
     const alkane: AlkaneToken = {
