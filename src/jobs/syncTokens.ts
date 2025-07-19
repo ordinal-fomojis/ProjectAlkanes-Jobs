@@ -1,6 +1,6 @@
 import { BlockHeight } from "../database/collections.js"
 import { database } from "../database/database.js"
-import { syncPendingMints } from "../database/syncPendingMints.js"
+import { syncCalculatedFields } from "../database/syncCalculatedFields.js"
 import { decodeAlkaneOpCallsInBlock } from "../utils/decoder.js"
 import { Logger } from "../utils/Logger.js"
 import { getAlkaneIdsAfterTimestamp, getAlkaneTokens } from "../utils/ordiscan/getAlkanes.js"
@@ -91,20 +91,19 @@ async function fetchNewTokens(log: Logger, lastSyncedBlock: BlockHeight | null, 
   const alkanes = await getAlkaneIdsAfterTimestamp(lastSyncedBlock?.timestamp ?? null)
   if (alkanes.length === 0) return { tokensFetched: 0 }
 
-  await database.withTransaction(async () => {
-    await database.alkaneToken.bulkWrite(alkanes.map(token => ({
-      updateOne: {
-        filter: { alkaneId: token.alkaneId },
-        update: { $setOnInsert: {
-          ...token,
-          synced: false,
-          blockSyncedAt: 0
-        } },
-        upsert: true
-      }
-    })))
-    await syncPendingMints({ alkaneId: { $in: alkanes.map(x => x.alkaneId) } })
-  })
+  await database.alkaneToken.bulkWrite(alkanes.map(token => ({
+    updateOne: {
+      filter: { alkaneId: token.alkaneId },
+      update: { $setOnInsert: {
+        ...token,
+        synced: false,
+        blockSyncedAt: 0
+      } },
+      upsert: true
+    }
+  })))
+
+  await syncCalculatedFields({ alkaneId: { $in: alkanes.map(x => x.alkaneId) } }, { syncPendingMints: true })
   log.info(`Fetched and saved ${alkanes.length.toString()} new tokens`)
   return { tokensFetched: alkanes.length }
 }
@@ -137,5 +136,8 @@ async function syncAlkaneTokens(log: Logger, currentBlockHeight: number) {
       upsert: true
     }
   })))
+  
+  await syncCalculatedFields({ alkaneId: { $in: successfulTokens.map(x => x.alkaneId) } }, { syncMintable: true })
+
   return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
 }
