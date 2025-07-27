@@ -4,7 +4,7 @@ import { database } from "./database.js"
 
 const MINTABLE_ALKANES = {
   factories: ['4:797'],
-  ids: ['2:0']
+  ids: []
 }
 
 interface SyncCalculatedFieldsOptions {

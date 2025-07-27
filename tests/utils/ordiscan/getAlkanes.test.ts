@@ -14,7 +14,7 @@ describe('getAlkaneTokens', () => {
       logo_url: 'https://example.com/logo.png',
       premined_supply: '100000000',
       amount_per_mint: '10000000',
-      mint_count_cap: '100',
+      mint_count_cap: '10',
       deploy_txid: 'tx123',
       deploy_timestamp: '2025-01-01T00:00:00Z',
       current_supply: '150000000',
@@ -34,17 +34,20 @@ describe('getAlkaneTokens', () => {
       logoUrl: 'https://example.com/logo.png',
       preminedSupply: "1",
       amountPerMint: "0.1",
-      mintCountCap: "100",
+      mintCountCap: "10",
+      approximateMintCountCap: 10,
       deployTxid: 'tx123',
       deployTimestamp: expect.any(Date),
       currentSupply: "1.5",
       currentMintCount: 5,
-      percentageMinted: 5,
+      percentageMinted: 50,
       mintedOut: false,
-      maxSupply: "11",
+      maxSupply: "2",
       synced: true,
       blockSyncedAt: 100000,
-      clonedFrom: null
+      clonedFrom: null,
+      preminePercentage: 50,
+      hasPremine: true,
     }))
   })
 })
