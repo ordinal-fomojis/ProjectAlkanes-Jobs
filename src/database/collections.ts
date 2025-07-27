@@ -27,7 +27,7 @@ export interface AlkaneToken {
   percentageMinted: number | null
   maxSupply: string | null
   mintedOut: boolean
-  preminePercentage: number | null
+  preminedPercentage: number | null
   hasPremine: boolean
 }
 
