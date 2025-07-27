@@ -46,7 +46,7 @@ describe('getAlkaneTokens', () => {
       synced: true,
       blockSyncedAt: 100000,
       clonedFrom: null,
-      preminePercentage: 50,
+      preminedPercentage: 50,
       hasPremine: true,
     }))
   })

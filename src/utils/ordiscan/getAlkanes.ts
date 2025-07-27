@@ -42,7 +42,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
     const percentageMinted = mintCountCap == null || mintCountCap.compareTo(ZERO) === 0 ? null
       : new bigDecimal(token.current_mint_count).multiply(HUNDRED).divide(mintCountCap)
-    const preminePercentage = maxSupply == null || maxSupply.compareTo(ZERO) === 0 ? null
+    const preminedPercentage = maxSupply == null || maxSupply.compareTo(ZERO) === 0 ? null
       : preminedSupply.multiply(HUNDRED).divide(maxSupply)
     const hasPremine = preminedSupply.compareTo(ZERO) > 0
 
@@ -65,7 +65,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp),
       clonedFrom: factoryClone,
       percentageMinted: percentageMinted == null ? null : parseFloat(percentageMinted.getValue()),
-      preminePercentage: preminePercentage == null ? null : parseFloat(preminePercentage.getValue()),
+      preminedPercentage: preminedPercentage == null ? null : parseFloat(preminedPercentage.getValue()),
       hasPremine
     }
     return alkane
@@ -105,7 +105,7 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
 
     const maxSupply = mintCountCap == null ? null
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
-    const preminePercentage = maxSupply == null || maxSupply.compareTo(ZERO) === 0 ? null
+    const preminedPercentage = maxSupply == null || maxSupply.compareTo(ZERO) === 0 ? null
       : preminedSupply.multiply(HUNDRED).divide(maxSupply)
     const hasPremine = preminedSupply.compareTo(ZERO) > 0
 
@@ -128,7 +128,7 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
       deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp),
       clonedFrom: UNSYNCED_FACTORY_CLONE_ID,
       percentageMinted: null,
-      preminePercentage: preminePercentage == null ? null : parseFloat(preminePercentage.getValue()),
+      preminedPercentage: preminedPercentage == null ? null : parseFloat(preminedPercentage.getValue()),
       hasPremine
     }
   })
