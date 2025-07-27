@@ -42,7 +42,8 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
     const percentageMinted = mintCountCap == null || mintCountCap.compareTo(ZERO) === 0 ? null
       : new bigDecimal(token.current_mint_count).multiply(HUNDRED).divide(mintCountCap)
-    const preminePercentage = maxSupply == null ? null : preminedSupply.multiply(HUNDRED).divide(maxSupply)
+    const preminePercentage = maxSupply == null || maxSupply.compareTo(ZERO) === 0 ? null
+      : preminedSupply.multiply(HUNDRED).divide(maxSupply)
     const hasPremine = preminedSupply.compareTo(ZERO) > 0
 
     const alkane: AlkaneToken = {
@@ -104,7 +105,8 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
 
     const maxSupply = mintCountCap == null ? null
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
-    const preminePercentage = maxSupply == null ? null : preminedSupply.multiply(HUNDRED).divide(maxSupply)
+    const preminePercentage = maxSupply == null || maxSupply.compareTo(ZERO) === 0 ? null
+      : preminedSupply.multiply(HUNDRED).divide(maxSupply)
     const hasPremine = preminedSupply.compareTo(ZERO) > 0
 
     return {
