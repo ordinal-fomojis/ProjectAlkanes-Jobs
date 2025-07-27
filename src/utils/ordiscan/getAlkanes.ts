@@ -24,6 +24,7 @@ const FullAlkanesSchema = BaseAlkanesSchema.extend({
 })
 
 const ZERO = new bigDecimal(0)
+const HUNDRED = new bigDecimal(100)
 
 export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'clonedFrom'>[], blockHeight: number) {
   return await throttledPromiseAllSettled(tokens.map(existingToken => async () => {
@@ -40,7 +41,9 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
     const maxSupply = mintCountCap == null ? null
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
     const percentageMinted = mintCountCap == null || mintCountCap.compareTo(ZERO) === 0 ? null
-      : new bigDecimal(100 * token.current_mint_count).divide(mintCountCap)
+      : new bigDecimal(token.current_mint_count).multiply(HUNDRED).divide(mintCountCap)
+    const preminePercentage = maxSupply == null ? null : preminedSupply.multiply(HUNDRED).divide(maxSupply)
+    const hasPremine = preminedSupply.compareTo(ZERO) > 0
 
     const alkane: AlkaneToken = {
       alkaneId: token.id,
@@ -52,6 +55,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       maxSupply: maxSupply?.stripTrailingZero().getValue() ?? null,
       currentSupply: toAlkaneValue(token.current_supply).stripTrailingZero().getValue(),
       mintCountCap: token.mint_count_cap,
+      approximateMintCountCap: token.mint_count_cap == null ? null : parseInt(token.mint_count_cap),
       currentMintCount: token.current_mint_count,
       mintedOut: token.mint_count_cap != null && (BigInt(token.current_mint_count) >= BigInt(token.mint_count_cap)),
       deployTxid: token.deploy_txid,
@@ -59,7 +63,9 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       blockSyncedAt: blockHeight,
       deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp),
       clonedFrom: factoryClone,
-      percentageMinted: percentageMinted == null ? null : parseFloat(percentageMinted.getValue())
+      percentageMinted: percentageMinted == null ? null : parseFloat(percentageMinted.getValue()),
+      preminePercentage: preminePercentage == null ? null : parseFloat(preminePercentage.getValue()),
+      hasPremine
     }
     return alkane
   }))
@@ -98,6 +104,8 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
 
     const maxSupply = mintCountCap == null ? null
       : (amountPerMint == null ? preminedSupply : preminedSupply.add(amountPerMint.multiply(mintCountCap)))
+    const preminePercentage = maxSupply == null ? null : preminedSupply.multiply(HUNDRED).divide(maxSupply)
+    const hasPremine = preminedSupply.compareTo(ZERO) > 0
 
     return {
       alkaneId: token.id,
@@ -109,6 +117,7 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
       maxSupply: maxSupply?.stripTrailingZero().getValue() ?? null,
       currentSupply: "0",
       mintCountCap: token.mint_count_cap,
+      approximateMintCountCap: token.mint_count_cap == null ? null : parseInt(token.mint_count_cap),
       currentMintCount: 0,
       mintedOut: true,
       deployTxid: token.deploy_txid,
@@ -116,7 +125,9 @@ async function getPagedAlkaneIds(page: number): Promise<AlkaneToken[]> {
       blockSyncedAt: 0,
       deployTimestamp: token.deploy_timestamp == null ? null : new Date(token.deploy_timestamp),
       clonedFrom: UNSYNCED_FACTORY_CLONE_ID,
-      percentageMinted: null
+      percentageMinted: null,
+      preminePercentage: preminePercentage == null ? null : parseFloat(preminePercentage.getValue()),
+      hasPremine
     }
   })
 }

@@ -13,6 +13,10 @@ export interface AlkaneToken {
   preminedSupply: string
   amountPerMint: string | null
   mintCountCap: string | null
+  // Numeric approximation for indexing/sorting.
+  // Will typically be exact, but for large values we will get numeric rounding,
+  // so calculations should use mintCountCap.
+  approximateMintCountCap: number | null
   currentSupply: string
   currentMintCount: number
   deployTxid: string | null
@@ -23,6 +27,8 @@ export interface AlkaneToken {
   percentageMinted: number | null
   maxSupply: string | null
   mintedOut: boolean
+  preminePercentage: number | null
+  hasPremine: boolean
 }
 
 export interface BlockHeight {
