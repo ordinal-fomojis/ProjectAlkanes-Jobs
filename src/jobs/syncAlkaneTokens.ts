@@ -11,7 +11,7 @@ import { getRawBlocks } from "../utils/rpc/getRawBlocks.js"
 const MAX_TOKENS_PER_SYNC = 50
 const MAX_BLOCKS_PER_BATCH = 3
 
-export async function syncTokens(log: Logger) {
+export async function syncAlkaneTokens(log: Logger) {
   const lastSyncBlockHeight = await database.blockHeight.find().sort({ height: 'desc' }).limit(1).next()
   log.info(`Last synced block height: ${(lastSyncBlockHeight?.height)?.toString() ?? 'none'}`)
   const currentBlockHeight = await getBlockHeight()
@@ -19,7 +19,7 @@ export async function syncTokens(log: Logger) {
   
   const { blocksSynced, tokensUnsynced } = await syncBlocks(log, lastSyncBlockHeight?.height ?? null, currentBlockHeight)
   const { tokensFetched } = await fetchNewTokens(log, lastSyncBlockHeight, currentBlockHeight)
-  const { syncedTokens, failedToSync } = await syncAlkaneTokens(log, currentBlockHeight)
+  const { syncedTokens, failedToSync } = await syncUnsyncedAlkaneTokens(log, currentBlockHeight)
 
   if (lastSyncBlockHeight == null) {
     log.info(`First sync. Inserting block height: ${currentBlockHeight.toString()}`)
@@ -109,7 +109,7 @@ async function fetchNewTokens(log: Logger, lastSyncedBlock: BlockHeight | null, 
 }
 
 // Syncs all tokens marked as unsynced in the database.
-async function syncAlkaneTokens(log: Logger, currentBlockHeight: number) {
+async function syncUnsyncedAlkaneTokens(log: Logger, currentBlockHeight: number) {
   const unsyncedTokens = await database.alkaneToken.find({ synced: false })
     .sort({ blockSyncedAt: 'asc' })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
