@@ -21,6 +21,9 @@ export default tseslint.config(
         destructuredArrayIgnorePattern: "^_",
         ignoreRestSiblings: true,
       }],
+      "@typescript-eslint/restrict-template-expressions": ["error", {
+        allowNumber: true
+      }]
     }
   },
   {

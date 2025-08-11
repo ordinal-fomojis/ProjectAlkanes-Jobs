@@ -20,7 +20,6 @@ export async function unisatFetch<Output, Def extends z.ZodTypeDef, Input>(schem
   LastRequestTime = nextRequestTime ?? Date.now()
   
   if (delay > 0) {
-    console.log(delay)
     await new Promise(r => setTimeout(r, delay))
   }
 

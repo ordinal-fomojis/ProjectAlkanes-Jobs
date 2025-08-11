@@ -28,6 +28,14 @@ class Database {
     return this.collections.confirmed_transactions ??= this.getCollection(CollectionName.ConfirmedTransaction)
   }
 
+  get syncStatus() {
+    return this.collections.sync_status ??= this.getCollection(CollectionName.SyncStatus)
+  }
+
+  get brcToken() {
+    return this.collections.brc_tokens ??= this.getCollection(CollectionName.BrcToken)
+  }
+
   async connect(uri: string, dbName: string) {
     this.client ??= new MongoClient(uri)
     await this.client.connect()
