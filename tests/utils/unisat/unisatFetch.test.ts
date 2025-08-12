@@ -50,7 +50,7 @@ describe('unisatFetch', () => {
       .rejects.toThrow('Unisat request to /empty-response failed with message: Success')
   })
 
-  it('should rate limit to 10 requests per second', async () => {
+  it('should rate limit to 5 requests per second', async () => {
     const testData = { balance: 1000, address: 'bc1qtest...' }
     vi.mocked(retrySchemaFetch).mockResolvedValue({
       code: 0,
