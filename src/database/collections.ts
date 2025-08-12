@@ -31,11 +31,20 @@ export interface AlkaneToken {
   hasPremine: boolean
 }
 
+export interface BrcToken {
+  ticker: string
+  synced: boolean
+}
+
 export interface BlockHeight {
   height: number
   synced: boolean
   // If block is not synced, timestamp is not necessarily accurate
   timestamp: Date
+}
+
+export interface SyncStatus {
+  brcSyncBlockHeight: number | null
 }
 
 export interface UnconfirmedTransaction {
@@ -68,6 +77,8 @@ export const CollectionName = {
   BlockHeight: 'block_heights',
   UnconfirmedTransaction: 'unconfirmed_transactions',
   ConfirmedTransaction: 'confirmed_transactions',
+  SyncStatus: 'sync_status',
+  BrcToken: 'brc_tokens'
 } as const
 export type CollectionName = (typeof CollectionName)[keyof typeof CollectionName]
 
@@ -77,4 +88,6 @@ export interface DataBaseType {
   [CollectionName.BlockHeight]: BlockHeight
   [CollectionName.UnconfirmedTransaction]: UnconfirmedTransaction
   [CollectionName.ConfirmedTransaction]: ConfirmedTransaction
+  [CollectionName.SyncStatus]: SyncStatus
+  [CollectionName.BrcToken]: BrcToken
 }
