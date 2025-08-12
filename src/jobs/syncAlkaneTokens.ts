@@ -12,6 +12,7 @@ const MAX_TOKENS_PER_SYNC = 50
 const MAX_BLOCKS_PER_BATCH = 3
 
 export async function syncAlkaneTokens(log: Logger) {
+  log.info("Starting Alkane token sync...")
   const lastSyncBlockHeight = await database.blockHeight.find().sort({ height: 'desc' }).limit(1).next()
   log.info(`Last synced block height: ${(lastSyncBlockHeight?.height)?.toString() ?? 'none'}`)
   const currentBlockHeight = await getBlockHeight()
@@ -104,7 +105,7 @@ async function fetchNewTokens(log: Logger, lastSyncedBlock: BlockHeight | null, 
   })))
 
   await syncCalculatedFields({ alkaneId: { $in: alkanes.map(x => x.alkaneId) } }, { syncPendingMints: true })
-  log.info(`Fetched and saved ${alkanes.length.toString()} new tokens`)
+  log.info(`Fetched and saved ${alkanes.length} new tokens`)
   return { tokensFetched: alkanes.length }
 }
 
@@ -113,15 +114,15 @@ async function syncUnsyncedAlkaneTokens(log: Logger, currentBlockHeight: number)
   const unsyncedTokens = await database.alkaneToken.find({ synced: false })
     .sort({ blockSyncedAt: 'asc' })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
-  log.info(`Syncing ${unsyncedTokens.length.toString()} tokens`)
+  log.info(`Syncing ${unsyncedTokens.length} tokens`)
 
   const tokens = await getAlkaneTokens(unsyncedTokens, currentBlockHeight)
   const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
-  log.info(`Successfully fetched ${successfulTokens.length.toString()} tokens`)
-  
+  log.info(`Successfully fetched ${successfulTokens.length} tokens`)
+
   const failedTokens = tokens.filter(r => r.status === 'rejected').map(r => r.reason)
   if (failedTokens.length > 0) {
-    log.warn(`Failed to fetch ${failedTokens.length.toString()} tokens`)
+    log.warn(`Failed to fetch ${failedTokens.length} tokens`)
     for (const error of failedTokens) {
       log.warn(`Failed to fetch token with error: `, error)
     }
