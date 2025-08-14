@@ -22,7 +22,7 @@ describe('parse utility', () => {
     
     const invalidData = { name: 'John', age: '30' }
     
-    expect(() => parse(schema, invalidData)).toThrow(/Expected number, received string/)
+    expect(() => parse(schema, invalidData)).toThrow(/^Invalid input: expected number, received string at "age"$/)
   })
 
   it('should simplify union error messages by picking the simplest error', () => {
@@ -34,10 +34,10 @@ describe('parse utility', () => {
     // Error is about the age field being a string instead of a number,
     // rather than about it being a number instead of a string
     const data1 = Array.from({ length: 1000 }, (_, i) => (i === 15 ? { age: i.toString() } : { age: i }))
-    expect(() => parse(unionSchema, data1)).toThrow(/^Validation error: Expected number, received string at "\[15\].age"$/)
+    expect(() => parse(unionSchema, data1)).toThrow(/^Invalid input: expected number, received string at "\[15\].age"$/)
 
     // Now it is the other way around, the error is about the string instead of the number
     const data2 = Array.from({ length: 1000 }, (_, i) => (i === 15 ? { age: i } : { age: i.toString() }))
-    expect(() => parse(unionSchema, data2)).toThrow(/^Validation error: Expected string, received number at "\[15\].age"$/)
+    expect(() => parse(unionSchema, data2)).toThrow(/^Invalid input: expected string, received number at "\[15\].age"$/)
   })
 })

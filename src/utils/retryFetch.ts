@@ -55,7 +55,7 @@ export async function retryBufferFetch(input: Parameters<typeof fetch>[0], init?
   return await retryResponseFetch(input, init, options).then(x => x.arrayBuffer())
 }
 
-export async function retrySchemaFetch<Output, Def extends z.ZodTypeDef, Input>(schema: z.ZodType<Output, Def, Input>, ...args: Parameters<typeof retryJsonFetch>) {
+export async function retrySchemaFetch<Output, Input>(schema: z.ZodType<Output, Input>, ...args: Parameters<typeof retryJsonFetch>) {
   return await retryJsonFetch(...args).then(response => parse(schema, response))
 }
 
