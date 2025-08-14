@@ -133,15 +133,13 @@ async function syncUnsyncedBrcTokens(log: Logger) {
   if (successfulTokens.length === 0) 
     return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
 
-  if (successfulTokens.length > 0) {
-    await database.brcToken.bulkWrite(successfulTokens.map(token => ({
-      updateOne: {
-        filter: { ticker: token.ticker },
-        update: { $set: { ...token, synced: true, initialised: true } satisfies BrcToken },
-        upsert: true
-      }
-    })))
-  }
+  await database.brcToken.bulkWrite(successfulTokens.map(token => ({
+    updateOne: {
+      filter: { ticker: token.ticker },
+      update: { $set: { ...token, synced: true, initialised: true } satisfies BrcToken },
+      upsert: true
+    }
+  })))
 
   return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
 }
