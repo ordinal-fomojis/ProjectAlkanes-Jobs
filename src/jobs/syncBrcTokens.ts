@@ -50,6 +50,11 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   }
 
   const syncedBlocks = syncedUpTo - lastSyncHeight
+  if (syncedBlocks === 0 && tickers.size === 0) {
+    log.info(`Did not sync any blocks or tokens.`)
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0 }
+  }
+  
   const unsyncedBlocks = currentHeight - syncedUpTo
   log.info(`Found ${tickers.size} unique tokens across ${syncedBlocks} synced blocks.`)
   log.info(`Skipped ${unsyncedBlocks} blocks due to errors.`)
@@ -75,6 +80,11 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
 async function syncUnsyncedBrcTokens(log: Logger) {
   const unsyncedTokens = await database.brcToken.find({ synced: false })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
+
+  if (unsyncedTokens.length === 0) {
+    log.info(`No unsynced BRC tokens found`)
+    return { syncedTokens: 0, failedToSync: 0 }
+  }
   log.info(`Syncing ${unsyncedTokens.length} unsynced BRC tokens`)
 
   const tokens = await getBrcsByTicker(unsyncedTokens.map(t => t.ticker))
