@@ -1,3 +1,4 @@
+import { BrcToken } from "../database/collections.js"
 import { database } from "../database/database.js"
 import { Logger } from "../utils/Logger.js"
 import { getAllBrcTokens } from "../utils/unisat/getAllBrcTokens.js"
@@ -6,6 +7,30 @@ import { getBrcsByTicker } from "../utils/unisat/getBrcByTicker.js"
 import { getInteractedBrcTokensInBlock } from "../utils/unisat/getInteractedBrcTokensInBlock.js"
 
 const MAX_TOKENS_PER_SYNC = 50
+
+const DEFAULT_BRC_TOKEN = {
+  synced: false,
+  initialised: false,
+  selfMint: false,
+  holdersCount: 0,
+  inscriptionNumber: 0,
+  inscriptionId: "",
+  max: "0",
+  limit: "0",
+  minted: "0",
+  totalMinted: "0",
+  confirmedMinted: "0",
+  confirmedMinted1h: "0",
+  confirmedMinted24h: "0",
+  mintTimes: 0,
+  decimal: 0,
+  deployHeight: 0,
+  deployBlocktime: 0,
+  completeHeight: 0,
+  completeBlocktime: 0,
+  inscriptionNumberStart: 0,
+  inscriptionNumberEnd: 0
+} satisfies Omit<BrcToken, 'ticker'>
 
 export async function syncBrctokens(log: Logger) {
   log.info("Starting BRC token sync...")
@@ -59,11 +84,16 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
       {},
       { $set: { brcSyncBlockHeight: syncedUpTo } }
     )
-    await database.brcToken.updateMany(
-      { ticker: { $in: Array.from(tickers) } },
-      { $set: { synced: false } },
-      { upsert: true }
-    )
+    await database.brcToken.bulkWrite(Array.from(tickers).map(ticker => ({
+      updateOne: {
+        filter: { ticker },
+        update: {
+          $set: { synced: false },
+          $setOnInsert: DEFAULT_BRC_TOKEN
+        },
+        upsert: true
+      }
+  })))
   })
 
   return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: tickers.size }
@@ -93,7 +123,7 @@ async function syncUnsyncedBrcTokens(log: Logger) {
   await database.brcToken.bulkWrite(successfulTokens.map(token => ({
     updateOne: {
       filter: { ticker: token.ticker },
-      update: { $set: { ...token, synced: true } },
+      update: { $set: { ...token, synced: true, initialised: true } satisfies BrcToken },
       upsert: true
     }
   })))
@@ -110,7 +140,7 @@ async function initialSync(log: Logger, blockHeight: number) {
     await database.brcToken.bulkWrite(tokens.map(token => ({
       updateOne: {
         filter: { ticker: token.ticker },
-        update: { $set: { ...token, synced: true } },
+        update: { $set: { ...token, synced: true, initialised: true } satisfies BrcToken },
         upsert: true
       }
     })))

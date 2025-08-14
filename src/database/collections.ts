@@ -34,6 +34,26 @@ export interface AlkaneToken {
 export interface BrcToken {
   ticker: string
   synced: boolean
+  initialised: boolean
+  selfMint: boolean
+  holdersCount: number
+  inscriptionNumber: number
+  inscriptionId: string
+  max: string
+  limit: string
+  minted: string
+  totalMinted: string
+  confirmedMinted: string
+  confirmedMinted1h: string
+  confirmedMinted24h: string
+  mintTimes: number
+  decimal: number
+  deployHeight: number
+  deployBlocktime: number
+  completeHeight: number
+  completeBlocktime: number
+  inscriptionNumberStart: number
+  inscriptionNumberEnd: number
 }
 
 export interface BlockHeight {
