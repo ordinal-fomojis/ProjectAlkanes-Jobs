@@ -1,19 +1,19 @@
 import z from "zod"
 import { callRpc } from "./callRpc.js"
 
-export type MultiRpcResponse<T, K extends readonly unknown[]> = {
+export type MultiRpcResponse<Output, K extends readonly unknown[]> = {
   success: false
   error: Error
   params: K
 } | {
   success: true
-  response: T
+  response: Output
   params: K
 }
 
-export async function callMultiRpc<T extends z.ZodTypeAny, K extends readonly unknown[]>(
-  schema: T, params: [string, K][]
-): Promise<MultiRpcResponse<z.infer<T>, K>[]> {
+export async function callMultiRpc<Output, Input, K extends readonly unknown[]>(
+  schema: z.ZodType<Output, Input>, params: [string, K][]
+): Promise<MultiRpcResponse<Output, K>[]> {
   const rpcSchema = z.array(z.object({
     result: schema.nullish().optional(),
     error: z.any().nullish().optional()

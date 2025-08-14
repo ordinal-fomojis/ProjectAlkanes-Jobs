@@ -6,7 +6,7 @@ const RATE_LIMIT = 100 // requests per minute
 const RATE_LIMIT_MS = (60000 / RATE_LIMIT) * 1.05 // 5% buffer to avoid hitting rate limit
 let LastRequestTime: number | null = null
 
-export async function ordiscanFetch<Output, Def extends z.ZodTypeDef, Input>(schema: z.ZodType<Output, Def, Input>, path: string, params: Record<string, string> = {}) {
+export async function ordiscanFetch<Output, Input>(schema: z.ZodType<Output, Input>, path: string, params: Record<string, string> = {}) {
   const responseSchema = z.object({
     data: schema.nullish().optional(),
     error: z.any().nullish().optional()
