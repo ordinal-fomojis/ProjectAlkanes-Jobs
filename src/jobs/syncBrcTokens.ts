@@ -15,8 +15,8 @@ export async function syncBrctokens(log: Logger) {
   log.info(`Current block height: ${currentBlockHeight.toString()}`)
 
   if (lastSyncBlockHeight == null) {
-    await initialSync(log, currentBlockHeight)
-    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: 0, failedToSync: 0 }
+    const tokenCount = await initialSync(log, currentBlockHeight)
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
   }
   else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
@@ -59,6 +59,9 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
       {},
       { $set: { brcSyncBlockHeight: syncedUpTo } }
     )
+
+    if (tickers.size === 0) return
+
     await database.brcToken.updateMany(
       { ticker: { $in: Array.from(tickers) } },
       { $set: { synced: false } },
@@ -89,14 +92,16 @@ async function syncUnsyncedBrcTokens(log: Logger) {
 
   if (successfulTokens.length === 0) 
     return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
-  
-  await database.brcToken.bulkWrite(successfulTokens.map(token => ({
-    updateOne: {
-      filter: { ticker: token.ticker },
-      update: { $set: { ...token, synced: true } },
-      upsert: true
-    }
-  })))
+
+  if (successfulTokens.length > 0) {
+    await database.brcToken.bulkWrite(successfulTokens.map(token => ({
+      updateOne: {
+        filter: { ticker: token.ticker },
+        update: { $set: { ...token, synced: true } },
+        upsert: true
+      }
+    })))
+  }
 
   return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
 }
@@ -107,6 +112,14 @@ async function initialSync(log: Logger, blockHeight: number) {
   log.info(`Fetched ${tokens.length} BRC tokens.`)
   
   await database.withTransaction(async () => {
+    await database.syncStatus.updateOne(
+      {},
+      { $set: { brcSyncBlockHeight: blockHeight } },
+      { upsert: true }
+    )
+
+    if (tokens.length === 0) return
+
     await database.brcToken.bulkWrite(tokens.map(token => ({
       updateOne: {
         filter: { ticker: token.ticker },
@@ -114,11 +127,7 @@ async function initialSync(log: Logger, blockHeight: number) {
         upsert: true
       }
     })))
-
-    await database.syncStatus.updateOne(
-      {},
-      { $set: { brcSyncBlockHeight: blockHeight } },
-      { upsert: true }
-    )
   })
+
+  return tokens.length
 }
