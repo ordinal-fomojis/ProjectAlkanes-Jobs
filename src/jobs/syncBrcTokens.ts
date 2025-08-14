@@ -89,7 +89,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
         filter: { ticker },
         update: {
           $set: { synced: false },
-          $setOnInsert: { ticker, ...DEFAULT_BRC_TOKEN } satisfies BrcToken
+          $setOnInsert: DEFAULT_BRC_TOKEN
         },
         upsert: true
       }
