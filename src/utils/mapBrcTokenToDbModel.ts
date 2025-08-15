@@ -2,6 +2,7 @@ import { bigDecimal } from 'js-big-decimal'
 import { BrcToken } from '../database/collections.js'
 import { getAllBrcTokens } from './unisat/getAllBrcTokens.js'
 
+const ZERO = new bigDecimal(0)
 const HUNDRED = new bigDecimal(100)
 
 export function mapBrcTokenToDbModel(
@@ -9,7 +10,7 @@ export function mapBrcTokenToDbModel(
 ) {
   const max = new bigDecimal(token.max)
   const minted = new bigDecimal(token.minted)
-  const percentageMinted = minted.divide(max).multiply(HUNDRED)
+  const percentageMinted = max.compareTo(ZERO) === 0 ? HUNDRED : minted.divide(max).multiply(HUNDRED)
   return {
     synced,
     initialised,
