@@ -5,6 +5,7 @@ import { BrcToken, SyncStatus } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
 import { syncBrctokens } from "../../src/jobs/syncBrcTokens.js"
 import { DB_NAME } from "../../src/utils/constants.js"
+import { mapBrcTokenToDbModel } from "../../src/utils/mapBrcTokenToDbModel.js"
 import { getAllBrcTokens } from "../../src/utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../../src/utils/unisat/getBestBrcBlockHeight.js"
 import { getBrcByTicker, getBrcsByTicker } from "../../src/utils/unisat/getBrcByTicker.js"
@@ -77,7 +78,10 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcToke
   mockBrcsByTicker(currentBrcTokens)
 
   if (dbBrcTokens.length > 0) {
-    await database.brcToken.insertMany(dbBrcTokens.map(token => ({ ...token, synced: true, initialised: true })))
+    await database.brcToken.insertMany(dbBrcTokens.map(token => ({
+      ticker: token.ticker,
+      ...mapBrcTokenToDbModel(token, { synced: true, initialised: true })
+    })))
   }
 
   return {
@@ -309,10 +313,10 @@ function compareDbTokenData(dbToken: WithId<BrcToken> | null, token: Awaited<Ret
   expect(dbToken?.confirmedMinted).toBe(token.confirmedMinted)
   expect(dbToken?.confirmedMinted1h).toBe(token.confirmedMinted1h)
   expect(dbToken?.confirmedMinted24h).toBe(token.confirmedMinted24h)
-  expect(dbToken?.mintTimes).toBe(token.mintTimes)
+  expect(dbToken?.currentMintCount).toBe(token.mintTimes)
   expect(dbToken?.decimal).toBe(token.decimal)
   expect(dbToken?.deployHeight).toBe(token.deployHeight)
-  expect(dbToken?.deployBlocktime).toBe(token.deployBlocktime)
+  expect(dbToken?.deployTimestamp).toBeInstanceOf(Date)
   expect(dbToken?.completeHeight).toBe(token.completeHeight)
   expect(dbToken?.completeBlocktime).toBe(token.completeBlocktime)
   expect(dbToken?.inscriptionNumberStart).toBe(token.inscriptionNumberStart)

@@ -35,6 +35,7 @@ export interface BrcToken {
   ticker: string
   synced: boolean
   initialised: boolean
+
   selfMint: boolean
   holdersCount: number
   inscriptionNumber: number
@@ -46,14 +47,18 @@ export interface BrcToken {
   confirmedMinted: string
   confirmedMinted1h: string
   confirmedMinted24h: string
-  mintTimes: number
   decimal: number
   deployHeight: number
-  deployBlocktime: number
   completeHeight: number
   completeBlocktime: number
   inscriptionNumberStart: number
   inscriptionNumberEnd: number
+
+  mintedOut: boolean
+  mintable: boolean
+  deployTimestamp: Date
+  percentageMinted: number
+  currentMintCount: number
 }
 
 export interface BlockHeight {
