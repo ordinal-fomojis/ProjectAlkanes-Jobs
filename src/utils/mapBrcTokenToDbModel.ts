@@ -11,7 +11,7 @@ export function mapBrcTokenToDbModel(
   const minted = new bigDecimal(token.minted)
   const percentageMinted = minted.divide(max).multiply(HUNDRED)
   return {
-    synced: synced,
+    synced,
     initialised: initialised,
     selfMint: token.selfMint,
     holdersCount: token.holdersCount,
