@@ -30,7 +30,7 @@ export function mapBrcTokenToDbModel(
     completeBlocktime: token.completeBlocktime,
     inscriptionNumberStart: token.inscriptionNumberStart,
     inscriptionNumberEnd: token.inscriptionNumberEnd,
-    mintedOut: max.compareTo(minted) >= 0,
+    mintedOut: minted.compareTo(max) >= 0,
     mintable: !token.selfMint,
     deployTimestamp: new Date(token.deployBlocktime * 1000),
     percentageMinted: parseFloat(percentageMinted.getValue()),
