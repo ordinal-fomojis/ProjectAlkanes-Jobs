@@ -71,7 +71,7 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, initialBr
 describe('syncBrcTokens', () => {
   it('should do initial sync if no sync status exists', async () => {
     const initialTokens = Array.from({ length: 10 }, () => randomBrcTokenResponse())
-    await setup({ syncStatus: null, initialBrcTokenResponse: initialTokens })
+    await setup({ syncStatus: null, currentBlockHeight: 900000, initialBrcTokenResponse: initialTokens })
 
     const result = await syncBrctokens(new MockLogger())
 
@@ -82,11 +82,15 @@ describe('syncBrcTokens', () => {
       syncedTokens: 10,
       failedToSync: 0
     })
+
     for (const token of initialTokens) {
       const dbToken = await database.brcToken.findOne({ ticker: token.ticker })
       compareDbTokenData(dbToken, token)
     }
-    
+
+    const syncStatus = await database.syncStatus.findOne({})
+    expect(syncStatus?.brcSyncBlockHeight).toBe(900000)
+
     await database.brcToken.deleteMany({ ticker: { $in: initialTokens.map(t => t.ticker) } })
   })
 })
