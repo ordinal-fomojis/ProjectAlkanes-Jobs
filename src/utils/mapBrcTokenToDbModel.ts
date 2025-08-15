@@ -5,7 +5,7 @@ import { getAllBrcTokens } from './unisat/getAllBrcTokens.js'
 const HUNDRED = new bigDecimal(100)
 
 export function mapBrcTokenToDbModel(
-  token: Awaited<ReturnType<typeof getAllBrcTokens>>[number], { synced, initialised } : { synced: boolean, initialised: boolean}
+  token: Awaited<ReturnType<typeof getAllBrcTokens>>[number], { synced, initialised }: { synced: boolean, initialised: boolean }
 ) {
   const max = new bigDecimal(token.max)
   const minted = new bigDecimal(token.minted)
