@@ -12,7 +12,7 @@ export function mapBrcTokenToDbModel(
   const percentageMinted = minted.divide(max).multiply(HUNDRED)
   return {
     synced,
-    initialised: initialised,
+    initialised,
     selfMint: token.selfMint,
     holdersCount: token.holdersCount,
     inscriptionNumber: token.inscriptionNumber,
