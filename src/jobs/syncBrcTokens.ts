@@ -1,6 +1,7 @@
 import { BrcToken } from "../database/collections.js"
 import { database } from "../database/database.js"
 import { Logger } from "../utils/Logger.js"
+import { mapBrcTokenToDbModel } from "../utils/mapBrcTokenToDbModel.js"
 import { getAllBrcTokens } from "../utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../utils/unisat/getBestBrcBlockHeight.js"
 import { getBrcsByTicker } from "../utils/unisat/getBrcByTicker.js"
@@ -21,14 +22,17 @@ const DEFAULT_BRC_TOKEN = {
   confirmedMinted: "0",
   confirmedMinted1h: "0",
   confirmedMinted24h: "0",
-  mintTimes: 0,
   decimal: 0,
   deployHeight: 0,
-  deployBlocktime: 0,
   completeHeight: 0,
   completeBlocktime: 0,
   inscriptionNumberStart: 0,
-  inscriptionNumberEnd: 0
+  inscriptionNumberEnd: 0,
+  mintable: false,
+  mintedOut: false,
+  percentageMinted: 0,
+  currentMintCount: 0,
+  deployTimestamp: new Date(0)
 } satisfies Omit<BrcToken, 'ticker' | 'synced'>
 
 export async function syncBrctokens(log: Logger) {
@@ -133,11 +137,10 @@ async function syncUnsyncedBrcTokens(log: Logger) {
     return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
 
   await database.brcToken.bulkWrite(successfulTokens.map(token => {
-    const { ticker, ...tokenWithoutTicker } = token
     return {
       updateOne: {
         filter: { ticker: token.ticker },
-        update: { $set: { ...tokenWithoutTicker, synced: true, initialised: true } satisfies Omit<BrcToken, 'ticker'> }
+        update: { $set: mapBrcTokenToDbModel(token, { synced: true, initialised: true }) }
       }
     }
   }))
@@ -160,11 +163,10 @@ async function initialSync(log: Logger, blockHeight: number) {
     if (tokens.length === 0) return
 
     await database.brcToken.bulkWrite(tokens.map(token => {
-      const { ticker, ...tokenWithoutTicker } = token
       return {
         updateOne: {
           filter: { ticker: token.ticker },
-          update: { $set: { ...tokenWithoutTicker, synced: true, initialised: true } satisfies Omit<BrcToken, 'ticker'> },
+          update: { $set: mapBrcTokenToDbModel(token, { synced: true, initialised: true }) },
           upsert: true
         }
       }
