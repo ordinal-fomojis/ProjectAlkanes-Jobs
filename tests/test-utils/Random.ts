@@ -162,4 +162,12 @@ export default class Random {
   static randomUUID() {
     return this.defaultRandom.randomUUID()
   }
+
+  randomBoolean() {
+    return this.randomIntLessThan(2) === 0
+  }
+
+  static randomBoolean() {
+    return this.defaultRandom.randomBoolean()
+  }
 }
