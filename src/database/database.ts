@@ -36,6 +36,10 @@ class Database {
     return this.collections.brc_tokens ??= this.getCollection(CollectionName.BrcToken)
   }
 
+  get mintTransaction() {
+    return this.collections.mint_transactions ??= this.getCollection(CollectionName.MintTransaction)
+  }
+
   async connect(uri: string, dbName: string) {
     this.client ??= new MongoClient(uri)
     await this.client.connect()
