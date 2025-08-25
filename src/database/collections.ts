@@ -72,8 +72,13 @@ export interface SyncStatus {
   brcSyncBlockHeight: number | null
 }
 
+interface EncryptedWif {
+  iv: string
+  data: string
+}
+
 export interface UnconfirmedTransaction {
-  wif?: string
+  encryptedWif?: EncryptedWif
   txid: string
   txHex: string
   broadcastFailedAtHeight: number | null
@@ -84,15 +89,38 @@ export interface UnconfirmedTransaction {
   mined: boolean
   mock: boolean
   mintTx?: ObjectId
+  // random id that is identical for all transactions in a single request
+  requestId: string
   created: Date
 }
 
 export interface ConfirmedTransaction {
-  wif?: string
+  encryptedWif?: EncryptedWif
   txid: string
   txHex: string
   mock: boolean
   mintTx?: ObjectId
+  // random id that is identical for all transactions in a single request
+  requestId: string
+  created: Date
+}
+
+export interface MintTransaction {
+  encryptedWif: EncryptedWif
+  serviceFee: number
+  networkFee: number
+  paddingCost: number
+  totalCost: number
+  paymentTxid: string
+  tokenId: string // Ticker for Brc, Id for Alkanes
+  type: 'brc' | 'alkane'
+  mintCount: number
+  paymentAddress: string
+  receiveAddress: string
+  authenticatedUserAddress?: string
+  txids: string[]
+  // random id that is identical for all transactions in a single request
+  requestId: string
   created: Date
 }
 
@@ -103,7 +131,8 @@ export const CollectionName = {
   UnconfirmedTransaction: 'unconfirmed_transactions',
   ConfirmedTransaction: 'confirmed_transactions',
   SyncStatus: 'sync_status',
-  BrcToken: 'brc_tokens'
+  BrcToken: 'brc_tokens',
+  MintTransaction: 'mint_transactions'
 } as const
 export type CollectionName = (typeof CollectionName)[keyof typeof CollectionName]
 
@@ -115,4 +144,5 @@ export interface DataBaseType {
   [CollectionName.ConfirmedTransaction]: ConfirmedTransaction
   [CollectionName.SyncStatus]: SyncStatus
   [CollectionName.BrcToken]: BrcToken
+  [CollectionName.MintTransaction]: MintTransaction
 }

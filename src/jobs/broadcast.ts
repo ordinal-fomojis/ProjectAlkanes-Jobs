@@ -2,6 +2,7 @@ import { Transaction } from "bitcoinjs-lib"
 import { AnyBulkWriteOperation } from "mongodb"
 import { ConfirmedTransaction, UnconfirmedTransaction } from "../database/collections.js"
 import { database } from "../database/database.js"
+import { syncConfirmationStatus } from "../database/syncConfirmationStatus.js"
 import { Logger } from "../utils/Logger.js"
 import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
 import { getTransactionConfirmations } from "../utils/rpc/getTransactionConfirmations.js"
@@ -30,6 +31,7 @@ export async function broadcast(log: Logger) {
       await database.confirmedTransaction.insertMany(confirmedTxns, session)
     }
   })
+  await syncConfirmationStatus(Array.from(new Set(broadcasted.map(tx => tx.requestId))))
 
   log.info('Successfully finished broadcast job')
 }
@@ -86,11 +88,12 @@ async function handleUnconfirmed({ log, transactions, unconfirmedUpdates } : Han
       return null
     
     return {
-      wif: tx.wif,
+      encryptedWif: tx.encryptedWif,
       txid: tx.txid,
       txHex: tx.txHex,
       mock: tx.mock,
       mintTx: tx.mintTx,
+      requestId: tx.requestId,
       created: tx.created
     } satisfies ConfirmedTransaction
   }).filter(x => x != null)
