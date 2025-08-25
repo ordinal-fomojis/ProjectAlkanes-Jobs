@@ -53,7 +53,7 @@ export async function syncCalculatedFields(
     $merge: {
       into: CollectionName.AlkaneToken,
       whenMatched: 'replace',
-      whenNotMatched: 'insert'
+      whenNotMatched: 'discard'
     }
   })
   await database.alkaneToken.aggregate(pipeline).toArray()

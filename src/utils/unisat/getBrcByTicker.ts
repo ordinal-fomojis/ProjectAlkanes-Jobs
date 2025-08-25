@@ -26,7 +26,7 @@ export const UnisatBrcSchema = z.object({
 })
 
 export async function getBrcByTicker(ticker: string) {
-  return await unisatFetch(UnisatBrcSchema, `/brc20/${ticker}/info`)
+  return await unisatFetch(UnisatBrcSchema, `/brc20/${encodeURIComponent(ticker)}/info`)
 }
 
 export async function getBrcsByTicker(tickers: string[]) {
