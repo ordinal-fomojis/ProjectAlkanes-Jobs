@@ -122,6 +122,7 @@ export interface MintTransaction {
   // random id that is identical for all transactions in a single request
   requestId: string
   created: Date
+  confirmed: boolean
 }
 
 export const CollectionName = {
