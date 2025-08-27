@@ -1,6 +1,5 @@
 import { MongoMemoryServer } from "mongodb-memory-server"
-import { afterEach } from "node:test"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 import { MintTransaction, UnconfirmedTransaction } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
 import { syncConfirmationStatus } from "../../src/database/syncConfirmationStatus.js"
