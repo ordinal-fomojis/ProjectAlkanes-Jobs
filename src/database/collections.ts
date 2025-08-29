@@ -53,6 +53,7 @@ export interface BrcToken {
   completeBlocktime: number
   inscriptionNumberStart: number
   inscriptionNumberEnd: number
+  tickerLength: number
 
   mintedOut: boolean
   mintable: boolean

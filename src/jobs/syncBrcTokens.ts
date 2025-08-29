@@ -32,7 +32,8 @@ const DEFAULT_BRC_TOKEN = {
   mintedOut: false,
   percentageMinted: 0,
   currentMintCount: 0,
-  deployTimestamp: new Date(0)
+  deployTimestamp: new Date(0),
+  tickerLength: 0
 } satisfies Omit<BrcToken, 'ticker' | 'synced'>
 
 export async function syncBrctokens(log: Logger) {

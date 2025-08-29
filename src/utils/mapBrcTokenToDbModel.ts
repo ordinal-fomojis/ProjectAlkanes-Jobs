@@ -35,6 +35,7 @@ export function mapBrcTokenToDbModel(
     mintable: !token.selfMint,
     deployTimestamp: new Date(token.deployBlocktime * 1000),
     percentageMinted: parseFloat(percentageMinted.getValue()),
-    currentMintCount: token.mintTimes
+    currentMintCount: token.mintTimes,
+    tickerLength: Buffer.from(token.ticker, 'utf-8').length
   } satisfies Omit<BrcToken, 'ticker'>
 }
