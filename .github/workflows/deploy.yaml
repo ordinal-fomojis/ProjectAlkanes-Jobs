@@ -61,7 +61,7 @@ jobs:
     - name: Get Terrform Outputs
       id: tf-outputs
       run: |
-        terraform init -backend-config="key=alkanes-${{ env.TFSTATE_FILE }}.tfstate"
+        terraform init -backend-config="key=${{ env.TFSTATE_FILE }}"
         echo "function_app_name=$(terraform output -raw function_app_name)" >> $GITHUB_OUTPUT
       working-directory: terraform
     
