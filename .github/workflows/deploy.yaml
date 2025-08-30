@@ -3,31 +3,27 @@ name: Deploy Jobs
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'prod'
-        type: choice
-        options:
-          - prod
-          - nonprod
+      id:
+        description: 'Id of the IaC deployment. Leave blank for the default prod deployment'
+        default: ''
+        type: string
 
 permissions:
-  id-token: write # Required for OIDC authentication with Azure
+  id-token: write
   contents: read
   issues: write
 
 env:
-  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  ENVIRONMENT: ${{ inputs.environment || 'prod' }}
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  TFSTATE_FILE: ${{ inputs.id == '' && 'shovel.tfstate' || 'shovel-${{ inputs.id }}.tfstate' }}
 
 jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'prod' }}
+    environment: ${{ inputs.id == '' && 'prod' || 'nonprod' }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -35,9 +31,9 @@ jobs:
     - name: Azure CLI Login
       uses: azure/login@v2
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     - name: Setup Node
       uses: actions/setup-node@v3
@@ -65,7 +61,7 @@ jobs:
     - name: Get Terrform Outputs
       id: tf-outputs
       run: |
-        terraform init -backend-config="key=alkanes-${{ env.ENVIRONMENT }}.tfstate"
+        terraform init -backend-config="key=alkanes-${{ env.TFSTATE_FILE }}.tfstate"
         echo "function_app_name=$(terraform output -raw function_app_name)" >> $GITHUB_OUTPUT
       working-directory: terraform
     
