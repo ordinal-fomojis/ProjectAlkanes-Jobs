@@ -23,9 +23,5 @@ export function registerJob(config: JobConfig) {
 }
 
 function nameToEnvVar(name: string) {
-  const upperCaseMatches = name.match(/[A-Z]/g) ?? []
-  for (const match of upperCaseMatches) {
-    name = name.replace(match, `_${match}`)
-  }
-  return name.toUpperCase()
+  return name.replace(/([A-Z])/g, '_$1').toUpperCase()
 }
