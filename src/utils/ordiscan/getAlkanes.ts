@@ -32,6 +32,12 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
     const factoryClone = existingToken.clonedFrom === UNSYNCED_FACTORY_CLONE_ID
       ? (token.deploy_txid == null ? null : await getAlkaneFactoryClone(token.deploy_txid))
       : existingToken.clonedFrom
+    
+    // WORKAROUND: Hardcode DIESEL data as it is incorrect on Ordiscan
+    if (token.id === '2:0') {
+      token.mint_count_cap = '359200'
+      token.amount_per_mint = '312500000'
+    }
 
     const preminedSupply = toAlkaneValue(token.premined_supply)
     const amountPerMint = token.amount_per_mint == null ? null : toAlkaneValue(token.amount_per_mint)
@@ -68,6 +74,17 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       preminedPercentage: preminedPercentage == null ? null : parseFloat(preminedPercentage.getValue()),
       hasPremine
     }
+
+    // WORKAROUND: Hardcode DIESEL data as it is incorrect on Ordiscan
+    if (alkane.alkaneId === '2:0') {
+      alkane.maxSupply = '1562500'
+      alkane.preminedPercentage = parseFloat(new bigDecimal(alkane.preminedSupply).multiply(HUNDRED).divide(new bigDecimal(alkane.maxSupply)).getValue())
+      const userMintedAmount = new bigDecimal(alkane.currentSupply).subtract(new bigDecimal(alkane.preminedSupply))
+      const maxExcludingPremine = new bigDecimal(alkane.maxSupply).subtract(new bigDecimal(alkane.preminedSupply))
+      alkane.currentMintCount = parseInt(userMintedAmount.divide(new bigDecimal('3.125')).round().getValue())
+      alkane.percentageMinted = parseFloat(userMintedAmount.multiply(HUNDRED).divide(maxExcludingPremine).getValue())
+    }
+
     return alkane
   }))
 }
