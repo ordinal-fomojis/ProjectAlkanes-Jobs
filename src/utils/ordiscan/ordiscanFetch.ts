@@ -2,7 +2,7 @@ import z from "zod"
 import { ORDISCAN_API_KEY } from "../constants.js"
 import { retrySchemaFetch } from "../retryFetch.js"
 
-const RATE_LIMIT = 100 // requests per minute
+const RATE_LIMIT = 50 // requests per minute
 const RATE_LIMIT_MS = (60000 / RATE_LIMIT) * 1.05 // 5% buffer to avoid hitting rate limit
 let LastRequestTime: number | null = null
 
