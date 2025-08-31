@@ -2,7 +2,7 @@ import { z } from "zod"
 import { BITCOIN_NETWORK, UNISAT_API_KEY } from "../constants.js"
 import { retrySchemaFetch } from "../retryFetch.js"
 
-const RATE_LIMIT = 5 // requests per second
+const RATE_LIMIT = 2.5 // requests per second
 const RATE_LIMIT_MS = (1000 / RATE_LIMIT) * 1.05 // 5% buffer to avoid hitting rate limit
 let LastRequestTime: number | null = null
 
