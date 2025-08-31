@@ -78,8 +78,15 @@ jobs:
     - name: Clean Up Terraform
       run: |
         rm -rf terraform
+    
+    - name: Deploy Nonprod
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
+        slot-name: 'nonprod'
 
-    - name: Deploy Function App
-      uses: Azure/functions-action@v1
+    - name: Deploy Prod
+      if: github.ref_name == 'main' && inputs.env == 'all'
+      uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
