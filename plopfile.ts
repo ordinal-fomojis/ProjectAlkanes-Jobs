@@ -36,7 +36,7 @@ export default function (plop: NodePlopAPI) {
       ]).flat()
     ],
     actions: [
-      function customAction(answers) {
+      function setVariable(answers) {
         const schema = z.object({
           name: z.string(),
           secret: z.boolean()
@@ -61,7 +61,7 @@ export default function (plop: NodePlopAPI) {
       }
     ],
     actions: [
-      function customAction(answers) {
+      function decryptEnv(answers) {
         const { parsed } = config({ path: `env/.env.${answers.environment}`, quiet: true })
 
         if (parsed == null) {
@@ -72,7 +72,7 @@ export default function (plop: NodePlopAPI) {
         for (const [key, value] of Object.entries(parsed)) {
           file = file.replace(new RegExp(`^${key}=.*$`, 'm'), `${key}="${value}"`)
         }
-        
+
         console.log('\n\n\n')
         console.log(file)
         console.log('\n')
