@@ -80,9 +80,9 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       alkane.maxSupply = '1562500'
       alkane.preminedPercentage = parseFloat(new bigDecimal(alkane.preminedSupply).multiply(HUNDRED).divide(new bigDecimal(alkane.maxSupply)).getValue())
       const userMintedAmount = new bigDecimal(alkane.currentSupply).subtract(new bigDecimal(alkane.preminedSupply))
-      const maxExludingPremine = new bigDecimal(alkane.maxSupply).subtract(new bigDecimal(alkane.preminedSupply))
+      const maxExcludingPremine = new bigDecimal(alkane.maxSupply).subtract(new bigDecimal(alkane.preminedSupply))
       alkane.currentMintCount = parseInt(userMintedAmount.divide(new bigDecimal('3.125')).round().getValue())
-      alkane.percentageMinted = parseFloat(userMintedAmount.multiply(HUNDRED).divide(maxExludingPremine).getValue())
+      alkane.percentageMinted = parseFloat(userMintedAmount.multiply(HUNDRED).divide(maxExcludingPremine).getValue())
     }
 
     return alkane
