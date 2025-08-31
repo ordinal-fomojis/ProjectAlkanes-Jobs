@@ -31,7 +31,7 @@ export async function broadcast(log: Logger) {
       await database.confirmedTransaction.insertMany(confirmedTxns, session)
     }
   })
-  await syncConfirmationStatus(Array.from(new Set(broadcasted.map(tx => tx.requestId))))
+  await syncConfirmationStatus(Array.from(new Set(transactions.map(tx => tx.requestId))))
 
   log.info('Successfully finished broadcast job')
 }
