@@ -44,7 +44,7 @@ describe('ordiscanFetch', () => {
     vi.mocked(retrySchemaFetch).mockResolvedValue({ data })
     const start = performance.now()
 
-    await Promise.all(Array.from({ length: 5 }, () =>
+    await Promise.all(Array.from({ length: 3 }, () =>
       ordiscanFetch(z.object({ id: z.string() }), 'inscriptions/detail', { id: '123456' })
     ))
     expect(performance.now() - start).toBeGreaterThanOrEqual(2400)
