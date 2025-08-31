@@ -1,5 +1,5 @@
 {
-  "name": "projectalkanes-jobs",
+  "name": "shovel-jobs",
   "version": "1.0.0",
   "description": "",
   "type": "module",
@@ -33,6 +33,7 @@
     "mongodb-memory-server": "^10.2.0",
     "plop": "^4.0.1",
     "seedrandom": "^3.0.5",
+    "tsc": "^2.0.4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0",
