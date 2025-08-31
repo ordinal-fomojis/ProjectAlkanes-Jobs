@@ -75,7 +75,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       hasPremine
     }
 
-    // WORKAROUND: Hardcode DEISEL data as it is incorrect on Ordiscan
+    // WORKAROUND: Hardcode DIESEL data as it is incorrect on Ordiscan
     if (alkane.alkaneId === '2:0') {
       alkane.maxSupply = '1562500'
       alkane.preminedPercentage = parseFloat(new bigDecimal(alkane.preminedSupply).multiply(HUNDRED).divide(new bigDecimal(alkane.maxSupply)).getValue())
