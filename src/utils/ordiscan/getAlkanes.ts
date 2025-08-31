@@ -33,7 +33,7 @@ export async function getAlkaneTokens(tokens: Pick<AlkaneToken, 'alkaneId' | 'cl
       ? (token.deploy_txid == null ? null : await getAlkaneFactoryClone(token.deploy_txid))
       : existingToken.clonedFrom
     
-    // WORKAROUND: Hardcode DEISEL data as it is incorrect on Ordiscan
+    // WORKAROUND: Hardcode DIESEL data as it is incorrect on Ordiscan
     if (token.id === '2:0') {
       token.mint_count_cap = '359200'
       token.amount_per_mint = '312500000'
