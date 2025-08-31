@@ -1,7 +1,6 @@
-import { app } from "@azure/functions"
 import { syncCalculatedFields } from "../database/syncCalculatedFields.js"
+import { registerJob } from "./registerJob.js"
 
-app.timer('syncPendingMints', {
-  schedule: '0 0 * * * *',
-  handler: async () => { await syncCalculatedFields(null, { syncMintable: true, syncPendingMints: true }) }
-})
+registerJob({ syncCalculatedFields: async () => {
+  await syncCalculatedFields(null, { syncMintable: true, syncPendingMints: true })
+}})

@@ -1,12 +1,22 @@
 name: Deploy Jobs
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       id:
         description: 'Id of the IaC deployment. Leave blank for the default prod deployment'
         default: ''
         type: string
+      env:
+        description: 'Deployment environment'
+        default: 'nonprod'
+        type: choice
+        options:
+          - nonprod
+          - all
 
 permissions:
   id-token: write
