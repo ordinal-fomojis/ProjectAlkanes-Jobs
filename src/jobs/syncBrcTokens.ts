@@ -176,7 +176,10 @@ async function syncUnsyncedBrcTokens(log: Logger) {
 
   // Get hardcoded token data
   const hardcodedTokensData = hardcodedTokensToSync.map((unsyncedToken: BrcToken) => {
-    const hardcodedData = HARDCODED_BRC_TOKENS.find((t: typeof HARDCODED_BRC_TOKENS[0]) => t.ticker === unsyncedToken.ticker)!
+    const hardcodedData = HARDCODED_BRC_TOKENS.find((t: typeof HARDCODED_BRC_TOKENS[0]) => t.ticker === unsyncedToken.ticker)
+    if (!hardcodedData) {
+      throw new Error(`Hardcoded token data not found for ticker: ${unsyncedToken.ticker}`)
+    }
     return hardcodedData
   })
 

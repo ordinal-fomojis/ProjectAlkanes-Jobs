@@ -344,8 +344,62 @@ describe('syncBrcTokens', () => {
 
     // Insert unsynced hardcoded tokens
     await database.brcToken.insertMany([
-      { ticker: 'gamefi', synced: false, initialised: false, ...({} as any) },
-      { ticker: 'gamble', synced: false, initialised: false, ...({} as any) }
+      { 
+        ticker: 'gamefi', 
+        synced: false, 
+        initialised: false,
+        selfMint: false,
+        holdersCount: 0,
+        inscriptionNumber: 0,
+        inscriptionId: "",
+        max: "0",
+        limit: "0",
+        minted: "0",
+        totalMinted: "0",
+        confirmedMinted: "0",
+        confirmedMinted1h: "0",
+        confirmedMinted24h: "0",
+        decimal: 0,
+        deployHeight: 0,
+        completeHeight: 0,
+        completeBlocktime: 0,
+        inscriptionNumberStart: 0,
+        inscriptionNumberEnd: 0,
+        mintable: false,
+        mintedOut: false,
+        percentageMinted: 0,
+        currentMintCount: 0,
+        deployTimestamp: new Date(0),
+        tickerLength: 6
+      },
+      { 
+        ticker: 'gamble', 
+        synced: false, 
+        initialised: false,
+        selfMint: false,
+        holdersCount: 0,
+        inscriptionNumber: 0,
+        inscriptionId: "",
+        max: "0",
+        limit: "0",
+        minted: "0",
+        totalMinted: "0",
+        confirmedMinted: "0",
+        confirmedMinted1h: "0",
+        confirmedMinted24h: "0",
+        decimal: 0,
+        deployHeight: 0,
+        completeHeight: 0,
+        completeBlocktime: 0,
+        inscriptionNumberStart: 0,
+        inscriptionNumberEnd: 0,
+        mintable: false,
+        mintedOut: false,
+        percentageMinted: 0,
+        currentMintCount: 0,
+        deployTimestamp: new Date(0),
+        tickerLength: 6
+      }
     ])
 
     const result = await syncBrctokens(new MockLogger())
