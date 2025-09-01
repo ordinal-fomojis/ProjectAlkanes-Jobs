@@ -36,6 +36,54 @@ const DEFAULT_BRC_TOKEN = {
   tickerLength: 0
 } satisfies Omit<BrcToken, 'ticker' | 'synced'>
 
+// Hardcoded BRC-20 tokens data
+const HARDCODED_BRC_TOKENS = [
+  {
+    ticker: "gamefi",
+    selfMint: false,
+    holdersCount: 115,
+    inscriptionNumber: 105344735,
+    inscriptionId: "312b2a1069cbf10d46cd1f27784347ca5625750ebe51b08c79f1c29dc4294dc6i0",
+    max: "888888888",
+    limit: "8888",
+    minted: "32064240",
+    totalMinted: "32064240",
+    confirmedMinted: "32064240",
+    confirmedMinted1h: "-181424",
+    confirmedMinted24h: "-181424",
+    mintTimes: 3607,
+    decimal: 18,
+    deployHeight: 912691,
+    deployBlocktime: 1734652800, // Approximate timestamp for block 912691
+    completeHeight: 0,
+    completeBlocktime: 0,
+    inscriptionNumberStart: 105344735,
+    inscriptionNumberEnd: 105344735
+  },
+  {
+    ticker: "gamble",
+    selfMint: false,
+    holdersCount: 9,
+    inscriptionNumber: 105344736,
+    inscriptionId: "e425ad4ffe22d8c1c44bf1c85618cb442da84c8afc0fe87967f87e1638220192i0",
+    max: "4206942069",
+    limit: "9999",
+    minted: "5359464",
+    totalMinted: "5359464",
+    confirmedMinted: "5359464",
+    confirmedMinted1h: "0",
+    confirmedMinted24h: "0",
+    mintTimes: 536,
+    decimal: 18,
+    deployHeight: 912691,
+    deployBlocktime: 1734652800, // Approximate timestamp for block 912691
+    completeHeight: 0,
+    completeBlocktime: 0,
+    inscriptionNumberStart: 105344736,
+    inscriptionNumberEnd: 105344736
+  }
+]
+
 export async function syncBrctokens(log: Logger) {
   log.info("Starting BRC token sync...")
   const lastSyncBlockHeight = (await database.syncStatus.findOne())?.brcSyncBlockHeight ?? null
@@ -121,23 +169,45 @@ async function syncUnsyncedBrcTokens(log: Logger) {
   }
   log.info(`Syncing ${unsyncedTokens.length} unsynced BRC tokens`)
 
-  const tokens = await getBrcsByTicker(unsyncedTokens.map(t => t.ticker))
-  const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
-  const failedTokens = tokens.filter(r => r.status === 'rejected').map(r => r.reason)
+  // Separate hardcoded tokens from those that need API calls
+  const hardcodedTickers = new Set(HARDCODED_BRC_TOKENS.map(t => t.ticker))
+  const hardcodedTokensToSync = unsyncedTokens.filter((t: BrcToken) => hardcodedTickers.has(t.ticker))
+  const apiTokensToSync = unsyncedTokens.filter((t: BrcToken) => !hardcodedTickers.has(t.ticker))
 
-  if (failedTokens.length > 0) {
-    log.warn(`Failed to fetch ${failedTokens.length} tokens`)
-    for (const error of failedTokens) {
+  // Get hardcoded token data
+  const hardcodedTokensData = hardcodedTokensToSync.map((unsyncedToken: BrcToken) => {
+    const hardcodedData = HARDCODED_BRC_TOKENS.find((t: typeof HARDCODED_BRC_TOKENS[0]) => t.ticker === unsyncedToken.ticker)!
+    return hardcodedData
+  })
+
+  // Get API token data
+  const apiTokenResults = apiTokensToSync.length > 0 
+    ? await getBrcsByTicker(apiTokensToSync.map((t: BrcToken) => t.ticker))
+    : []
+
+  const successfulApiTokens = apiTokenResults.filter(r => r.status === 'fulfilled').map(r => r.value)
+  const failedApiTokens = apiTokenResults.filter(r => r.status === 'rejected').map(r => r.reason)
+
+  // Combine hardcoded and API tokens
+  const allSuccessfulTokens = [...hardcodedTokensData, ...successfulApiTokens]
+
+  if (failedApiTokens.length > 0) {
+    log.warn(`Failed to fetch ${failedApiTokens.length} tokens from API`)
+    for (const error of failedApiTokens) {
       log.warn(`Failed to fetch token with error: `, error)
     }
   }
 
-  log.info(`Successfully fetched ${successfulTokens.length} tokens`)
+  if (hardcodedTokensData.length > 0) {
+    log.info(`Using hardcoded data for ${hardcodedTokensData.length} tokens: ${hardcodedTokensData.map((t: typeof HARDCODED_BRC_TOKENS[0]) => t.ticker).join(', ')}`)
+  }
 
-  if (successfulTokens.length === 0) 
+  log.info(`Successfully fetched ${allSuccessfulTokens.length} tokens (${hardcodedTokensData.length} hardcoded, ${successfulApiTokens.length} from API)`)
+
+  if (allSuccessfulTokens.length === 0) 
     return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
 
-  await database.brcToken.bulkWrite(successfulTokens.map(token => {
+  await database.brcToken.bulkWrite(allSuccessfulTokens.map(token => {
     return {
       updateOne: {
         filter: { ticker: token.ticker },
@@ -146,13 +216,17 @@ async function syncUnsyncedBrcTokens(log: Logger) {
     }
   }))
 
-  return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
+  return { syncedTokens: allSuccessfulTokens.length, failedToSync: apiTokenResults.length - successfulApiTokens.length }
 }
 
 async function initialSync(log: Logger, blockHeight: number) {
   log.info(`First sync. Performing initial sync.`)
-  const tokens = await getAllBrcTokens()
-  log.info(`Fetched ${tokens.length} BRC tokens.`)
+  const apiTokens = await getAllBrcTokens()
+  log.info(`Fetched ${apiTokens.length} BRC tokens from API.`)
+  
+  // Combine API tokens with hardcoded tokens
+  const allTokens = [...apiTokens, ...HARDCODED_BRC_TOKENS]
+  log.info(`Total tokens including hardcoded: ${allTokens.length} (${apiTokens.length} from API, ${HARDCODED_BRC_TOKENS.length} hardcoded)`)
   
   await database.withTransaction(async () => {
     await database.syncStatus.updateOne(
@@ -161,9 +235,9 @@ async function initialSync(log: Logger, blockHeight: number) {
       { upsert: true }
     )
 
-    if (tokens.length === 0) return
+    if (allTokens.length === 0) return
 
-    await database.brcToken.bulkWrite(tokens.map(token => {
+    await database.brcToken.bulkWrite(allTokens.map(token => {
       return {
         updateOne: {
           filter: { ticker: token.ticker },
@@ -174,5 +248,5 @@ async function initialSync(log: Logger, blockHeight: number) {
     }))
   })
 
-  return tokens.length
+  return allTokens.length
 }

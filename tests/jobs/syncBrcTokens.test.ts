@@ -110,7 +110,7 @@ describe('syncBrcTokens', () => {
       blocksSynced: 0,
       blocksSkippedOrFailed: 0,
       tokensUnsynced: 0,
-      syncedTokens: 10,
+      syncedTokens: 12, // 10 from API + 2 hardcoded tokens (gamefi, gamble)
       failedToSync: 0
     })
 
@@ -124,7 +124,7 @@ describe('syncBrcTokens', () => {
     const syncStatus = await database.syncStatus.findOne({})
     expect(syncStatus?.brcSyncBlockHeight).toBe(900000)
 
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
+    await database.brcToken.deleteMany({ ticker: { $in: [...currentBrcTokens.map(t => t.ticker), 'gamefi', 'gamble'] } })
   })
 
   it('should update existing tokens, and add new ones when syncing', async () => {
@@ -296,6 +296,81 @@ describe('syncBrcTokens', () => {
     expect(getBrcsByTicker).not.toHaveBeenCalled()
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
+  })
+
+  it('should sync hardcoded tokens without API calls during initial sync', async () => {
+    await setup({ syncStatus: null, currentBlockHeight: 900000, dbBrcTokens: [], currentBrcTokens: [] })
+
+    const result = await syncBrctokens(new MockLogger())
+
+    expect(result).toEqual({
+      blocksSynced: 0,
+      blocksSkippedOrFailed: 0,
+      tokensUnsynced: 0,
+      syncedTokens: 2, // Only hardcoded tokens (gamefi, gamble)
+      failedToSync: 0
+    })
+
+    // Check that hardcoded tokens were inserted
+    const gamefiToken = await database.brcToken.findOne({ ticker: 'gamefi' })
+    expect(gamefiToken).toBeDefined()
+    expect(gamefiToken?.synced).toBe(true)
+    expect(gamefiToken?.initialised).toBe(true)
+    expect(gamefiToken?.max).toBe('888888888')
+    expect(gamefiToken?.limit).toBe('8888')
+    expect(gamefiToken?.minted).toBe('32064240')
+    expect(gamefiToken?.holdersCount).toBe(115)
+
+    const gambleToken = await database.brcToken.findOne({ ticker: 'gamble' })
+    expect(gambleToken).toBeDefined()
+    expect(gambleToken?.synced).toBe(true)
+    expect(gambleToken?.initialised).toBe(true)
+    expect(gambleToken?.max).toBe('4206942069')
+    expect(gambleToken?.limit).toBe('9999')
+    expect(gambleToken?.minted).toBe('5359464')
+    expect(gambleToken?.holdersCount).toBe(9)
+
+    await database.brcToken.deleteMany({ ticker: { $in: ['gamefi', 'gamble'] } })
+  })
+
+  it('should prefer hardcoded data over API for hardcoded tokens during regular sync', async () => {
+    // Setup with hardcoded tokens marked as unsynced
+    await setup({ 
+      syncStatus: { brcSyncBlockHeight: 900000 }, 
+      currentBlockHeight: 900000,
+      dbBrcTokens: [],
+      currentBrcTokens: []
+    })
+
+    // Insert unsynced hardcoded tokens
+    await database.brcToken.insertMany([
+      { ticker: 'gamefi', synced: false, initialised: false, ...({} as any) },
+      { ticker: 'gamble', synced: false, initialised: false, ...({} as any) }
+    ])
+
+    const result = await syncBrctokens(new MockLogger())
+
+    expect(result).toEqual({
+      blocksSynced: 0,
+      blocksSkippedOrFailed: 0,
+      tokensUnsynced: 0,
+      syncedTokens: 2,
+      failedToSync: 0
+    })
+
+    // Verify API was not called for hardcoded tokens
+    expect(getBrcsByTicker).not.toHaveBeenCalled()
+
+    // Verify hardcoded tokens were synced
+    const gamefiToken = await database.brcToken.findOne({ ticker: 'gamefi' })
+    expect(gamefiToken?.synced).toBe(true)
+    expect(gamefiToken?.minted).toBe('32064240') // From hardcoded data
+
+    const gambleToken = await database.brcToken.findOne({ ticker: 'gamble' })
+    expect(gambleToken?.synced).toBe(true)
+    expect(gambleToken?.minted).toBe('5359464') // From hardcoded data
+
+    await database.brcToken.deleteMany({ ticker: { $in: ['gamefi', 'gamble'] } })
   })
 })
 
