@@ -16,7 +16,7 @@ on:
         type: choice
         options:
           - nonprod
-          - all
+          - prod
 
 permissions:
   id-token: write
@@ -81,12 +81,13 @@ jobs:
     
     - name: Deploy Nonprod
       uses: Azure/functions-action@v1
+      if: inputs.env != 'prod'
       with:
         app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
         slot-name: 'nonprod'
 
     - name: Deploy Prod
-      if: github.ref_name == 'main' && inputs.env == 'all'
+      if: github.ref_name == 'main' && inputs.env == 'prod'
       uses: Azure/functions-action@v1
       with:
         app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
