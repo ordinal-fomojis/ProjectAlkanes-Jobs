@@ -6,7 +6,8 @@ __azurite_db*__.json
 __blobstorage__
 __queuestorage__
 local.settings.json
-test
+tests
 tsconfig.json
 vitest.config.ts
 .env.keys
+tsconfig.tsbuildinfo
