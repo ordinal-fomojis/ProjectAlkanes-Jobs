@@ -72,7 +72,8 @@ jobs:
       id: tf-outputs
       run: |
         terraform init -backend-config="key=${{ env.TFSTATE_FILE }}"
-        echo "function_app_name=$(terraform output -raw function_app_name)" >> $GITHUB_OUTPUT
+        echo "prod_name=$(terraform output -raw function_app_name_prod)" >> $GITHUB_OUTPUT
+        echo "nonprod_name=$(terraform output -raw function_app_name_nonprod)" >> $GITHUB_OUTPUT
       working-directory: terraform
     
     - name: Clean Up Terraform
@@ -83,11 +84,12 @@ jobs:
       uses: Azure/functions-action@v1
       if: inputs.env != 'prod'
       with:
-        app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
-        slot-name: 'nonprod'
+        app-name: ${{ steps.tf-outputs.outputs.nonprod_name }}
+        respect-funcignore: true
 
     - name: Deploy Prod
       if: github.ref_name == 'main' && inputs.env == 'prod'
       uses: Azure/functions-action@v1
       with:
-        app-name: ${{ steps.tf-outputs.outputs.function_app_name }}
+        app-name: ${{ steps.tf-outputs.outputs.prod_name }}
+        respect-funcignore: true
