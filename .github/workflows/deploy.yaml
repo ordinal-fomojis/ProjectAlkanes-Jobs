@@ -72,8 +72,8 @@ jobs:
       id: tf-outputs
       run: |
         terraform init -backend-config="key=${{ env.TFSTATE_FILE }}"
-        echo "prod_name=$(terraform output -raw function_app_name_prod)" >> $GITHUB_OUTPUT
-        echo "nonprod_name=$(terraform output -raw function_app_name_nonprod)" >> $GITHUB_OUTPUT
+        echo "prod_name=$(echo $function_app_name | jq -r '."prod"')" >> $GITHUB_OUTPUT
+        echo "nonprod_name=$(echo $function_app_name | jq -r '."nonprod"')" >> $GITHUB_OUTPUT
       working-directory: terraform
     
     - name: Clean Up Terraform
