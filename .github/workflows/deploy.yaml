@@ -72,6 +72,7 @@ jobs:
       id: tf-outputs
       run: |
         terraform init -backend-config="key=${{ env.TFSTATE_FILE }}"
+        function_app_name=$(terraform output -json function_app_name)
         echo "prod_name=$(echo $function_app_name | jq -r '."prod"')" >> $GITHUB_OUTPUT
         echo "nonprod_name=$(echo $function_app_name | jq -r '."nonprod"')" >> $GITHUB_OUTPUT
       working-directory: terraform
