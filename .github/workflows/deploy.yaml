@@ -82,7 +82,7 @@ jobs:
     
     - name: Deploy Nonprod
       uses: Azure/functions-action@v1
-      if: inputs.env != 'prod'
+      continue-on-error: true
       with:
         app-name: ${{ steps.tf-outputs.outputs.nonprod_name }}
         respect-funcignore: true
