@@ -2,6 +2,7 @@ import { BrcToken } from "../database/collections.js"
 import { database } from "../database/database.js"
 import { Logger } from "../utils/Logger.js"
 import { mapBrcTokenToDbModel } from "../utils/mapBrcTokenToDbModel.js"
+import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
 import { getAllBrcTokens } from "../utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../utils/unisat/getBestBrcBlockHeight.js"
 import { getBrcsByTicker } from "../utils/unisat/getBrcByTicker.js"
@@ -84,11 +85,11 @@ const HARDCODED_BRC_TOKENS = [
   }
 ]
 
-export async function syncBrctokens(log: Logger) {
+export async function syncBrcTokens(log: Logger) {
   log.info("Starting BRC token sync...")
   const lastSyncBlockHeight = (await database.syncStatus.findOne())?.brcSyncBlockHeight ?? null
   log.info(`Last synced block height: ${lastSyncBlockHeight?.toString() ?? 'none'}`)
-  const currentBlockHeight = await getBestBrcBlockHeight()
+  const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight)
   log.info(`Current block height: ${currentBlockHeight.toString()}`)
 
   if (lastSyncBlockHeight == null) {
@@ -252,4 +253,24 @@ async function initialSync(log: Logger, blockHeight: number) {
   })
 
   return allTokens.length
+}
+
+async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null) {
+  const actualBlockHeight = await getBlockHeight()
+
+  // If we have synced up to the actual block height, then it's not possible for there to be unsynced blocks,
+  // so just return the height we've synced to.
+  if (lastSyncedBlockHeight != null && lastSyncedBlockHeight >= actualBlockHeight) {
+    return actualBlockHeight
+  }
+
+  // Similar logic for BRC block height. Assume if we've synced up to it,
+  // then there are also no 6 byte BRC blocks to sync. Might not be true, but it will save unnecessary API calls.
+  const brcBlockHeight = await getBestBrcBlockHeight()
+  if (lastSyncedBlockHeight != null && lastSyncedBlockHeight >= brcBlockHeight) {
+    return brcBlockHeight
+  }
+
+  const sixByteBrcBlockHeight = await getBestBrcBlockHeight('6-byte')
+  return Math.min(brcBlockHeight, sixByteBrcBlockHeight)
 }
