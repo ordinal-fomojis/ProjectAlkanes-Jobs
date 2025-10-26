@@ -18,12 +18,9 @@ export const UnisatBrcSchema = z.object({
   mintTimes: z.number(),
   decimal: z.number(),
   deployHeight: z.number(),
-  deployBlocktime: z.number(),
-  completeHeight: z.number(),
-  completeBlocktime: z.number(),
-  inscriptionNumberStart: z.number(),
-  inscriptionNumberEnd: z.number()
+  deployBlocktime: z.number().optional()
 })
+export type UnisatBrcToken = z.infer<typeof UnisatBrcSchema>
 
 export async function getBrcByTicker(ticker: string) {
   return await unisatFetch(UnisatBrcSchema, `/brc20/${encodeURIComponent(ticker)}/info`)

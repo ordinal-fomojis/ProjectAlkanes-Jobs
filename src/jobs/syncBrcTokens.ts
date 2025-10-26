@@ -2,6 +2,7 @@ import { BrcToken } from "../database/collections.js"
 import { database } from "../database/database.js"
 import { Logger } from "../utils/Logger.js"
 import { mapBrcTokenToDbModel } from "../utils/mapBrcTokenToDbModel.js"
+import { populateBrcTimestamp } from "../utils/populateBrcTimestamp.js"
 import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
 import { getAllBrcTokens } from "../utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../utils/unisat/getBestBrcBlockHeight.js"
@@ -25,10 +26,6 @@ const DEFAULT_BRC_TOKEN = {
   confirmedMinted24h: "0",
   decimal: 0,
   deployHeight: 0,
-  completeHeight: 0,
-  completeBlocktime: 0,
-  inscriptionNumberStart: 0,
-  inscriptionNumberEnd: 0,
   mintable: false,
   mintedOut: false,
   percentageMinted: 0,
@@ -37,7 +34,7 @@ const DEFAULT_BRC_TOKEN = {
   tickerLength: 0
 } satisfies Omit<BrcToken, 'ticker' | 'synced'>
 
-export async function syncBrctokens(log: Logger) {
+export async function syncBrcTokens(log: Logger) {
   log.info("Starting BRC token sync...")
   const lastSyncBlockHeight = (await database.syncStatus.findOne())?.brcSyncBlockHeight ?? null
   log.info(`Last synced block height: ${lastSyncBlockHeight?.toString() ?? 'none'}`)
@@ -138,7 +135,9 @@ async function syncUnsyncedBrcTokens(log: Logger) {
   if (successfulTokens.length === 0) 
     return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
 
-  await database.brcToken.bulkWrite(successfulTokens.map(token => {
+  const tokensWithTimestamps = await populateBrcTimestamp(successfulTokens, unsyncedTokens)
+
+  await database.brcToken.bulkWrite(tokensWithTimestamps.map(token => {
     return {
       updateOne: {
         filter: { ticker: token.ticker },
@@ -152,7 +151,7 @@ async function syncUnsyncedBrcTokens(log: Logger) {
 
 async function initialSync(log: Logger, blockHeight: number) {
   log.info(`First sync. Performing initial sync.`)
-  const tokens = await getAllBrcTokens()
+  const tokens = await populateBrcTimestamp(await getAllBrcTokens(), [])
   log.info(`Fetched ${tokens.length} BRC tokens.`)
   
   await database.withTransaction(async () => {
