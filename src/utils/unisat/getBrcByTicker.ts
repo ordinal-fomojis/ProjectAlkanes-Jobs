@@ -1,4 +1,5 @@
 import z from "zod"
+import { normaliseTicker, tickerLength } from "../brc-ticker.js"
 import { throttledPromiseAllSettled } from "../throttledPromise.js"
 import { unisatFetch } from "./unisatFetch.js"
 
@@ -23,7 +24,8 @@ export const UnisatBrcSchema = z.object({
 export type UnisatBrcToken = z.infer<typeof UnisatBrcSchema>
 
 export async function getBrcByTicker(ticker: string) {
-  return await unisatFetch(UnisatBrcSchema, `/brc20/${encodeURIComponent(ticker)}/info`)
+  const path = tickerLength(ticker) === 6 ? 'brc20-prog' : 'brc20'
+  return await unisatFetch(UnisatBrcSchema, `/${path}/${encodeURIComponent(normaliseTicker(ticker))}/info`)
 }
 
 export async function getBrcsByTicker(tickers: string[]) {
