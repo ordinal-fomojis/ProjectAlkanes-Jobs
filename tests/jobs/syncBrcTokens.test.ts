@@ -3,16 +3,18 @@ import { MongoMemoryServer } from "mongodb-memory-server"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { BrcToken, SyncStatus } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
-import { syncBrctokens } from "../../src/jobs/syncBrcTokens.js"
+import { syncBrcTokens } from "../../src/jobs/syncBrcTokens.js"
 import { DB_NAME } from "../../src/utils/constants.js"
 import { mapBrcTokenToDbModel } from "../../src/utils/mapBrcTokenToDbModel.js"
+import { getBlockHeight } from "../../src/utils/rpc/getBlockHeight.js"
 import { getAllBrcTokens } from "../../src/utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../../src/utils/unisat/getBestBrcBlockHeight.js"
-import { getBrcByTicker, getBrcsByTicker } from "../../src/utils/unisat/getBrcByTicker.js"
+import { getBrcByTicker, getBrcsByTicker, UnisatBrcToken } from "../../src/utils/unisat/getBrcByTicker.js"
 import { getInteractedBrcTokensInBlock } from "../../src/utils/unisat/getInteractedBrcTokensInBlock.js"
 import { MockLogger } from "../test-utils/MockLogger.js"
 import Random from "../test-utils/Random.js"
 
+vi.mock("../../src/utils/rpc/getBlockHeight.js")
 vi.mock("../../src/utils/unisat/getBestBrcBlockHeight.js")
 vi.mock("../../src/utils/unisat/getAllBrcTokens.js")
 vi.mock("../../src/utils/unisat/getBrcByTicker.js")
@@ -29,7 +31,7 @@ afterAll(async () => {
   await mongodb.stop()
 })
 
-type BaseBrcToken = Awaited<ReturnType<typeof getBrcByTicker>>
+type BaseBrcToken = UnisatBrcToken & { deployBlocktime: number }
 function randomBrcTokenResponse(ticker?: string): BaseBrcToken {
   const max = Random.randomIntLessThan(1000000000)
   const minted = Random.randomIntLessThan(max).toString(10)
@@ -49,11 +51,7 @@ function randomBrcTokenResponse(ticker?: string): BaseBrcToken {
     mintTimes: Random.randomIntLessThan(100),
     decimal: Random.randRange(1, 19),
     deployHeight: 800000,
-    deployBlocktime: new Date().getTime(),
-    completeHeight: 0,
-    completeBlocktime: 0,
-    inscriptionNumberStart: 0,
-    inscriptionNumberEnd: 0
+    deployBlocktime: new Date().getTime()
   }
 }
 
@@ -70,6 +68,7 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcToke
     await database.syncStatus.insertOne(syncStatus)
   }
 
+  vi.mocked(getBlockHeight).mockResolvedValue(currentBlockHeight)
   vi.mocked(getBestBrcBlockHeight).mockResolvedValue(currentBlockHeight)
 
   currentBrcTokens ??= Array.from({ length: 10 }, () => randomBrcTokenResponse())
@@ -104,7 +103,7 @@ describe('syncBrcTokens', () => {
   it('should do initial sync if no sync status exists', async () => {
     const { currentBrcTokens } = await setup({ syncStatus: null, currentBlockHeight: 900000, dbBrcTokens: [] })
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -134,7 +133,7 @@ describe('syncBrcTokens', () => {
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 7).map(x => x.ticker)))
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(3).map(x => x.ticker)))
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -168,7 +167,7 @@ describe('syncBrcTokens', () => {
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 1).map(x => x.ticker)))
       .mockRejectedValueOnce(new Error('Network error'))
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -191,7 +190,7 @@ describe('syncBrcTokens', () => {
   it('should handle no new blocks to sync', async () => {
     const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900000 })
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -221,7 +220,7 @@ describe('syncBrcTokens', () => {
 
     mockBrcsByTicker(currentBrcTokens, [existingFail.ticker, nonExistingFail.ticker])
     
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -262,7 +261,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -283,7 +282,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
