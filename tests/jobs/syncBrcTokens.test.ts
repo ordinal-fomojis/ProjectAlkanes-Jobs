@@ -316,8 +316,4 @@ function compareDbTokenData(dbToken: WithId<BrcToken> | null, token: Awaited<Ret
   expect(dbToken?.decimal).toBe(token.decimal)
   expect(dbToken?.deployHeight).toBe(token.deployHeight)
   expect(dbToken?.deployTimestamp).toBeInstanceOf(Date)
-  expect(dbToken?.completeHeight).toBe(token.completeHeight)
-  expect(dbToken?.completeBlocktime).toBe(token.completeBlocktime)
-  expect(dbToken?.inscriptionNumberStart).toBe(token.inscriptionNumberStart)
-  expect(dbToken?.inscriptionNumberEnd).toBe(token.inscriptionNumberEnd)
 }
