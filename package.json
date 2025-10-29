@@ -24,9 +24,9 @@
     "zod-validation-error": "^4.0.2"
   },
   "devDependencies": {
-    "@types/node": "^24.9.1",
+    "@types/node": "^24.9.2",
     "@types/seedrandom": "^3.0.8",
-    "@vitest/coverage-istanbul": "^4.0.1",
+    "@vitest/coverage-istanbul": "^4.0.4",
     "cross-env": "^10.1.0",
     "eslint": "^9.38.0",
     "jiti": "^2.6.1",
