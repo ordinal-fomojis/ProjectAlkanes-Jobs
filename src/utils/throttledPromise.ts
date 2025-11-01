@@ -14,13 +14,6 @@ export async function throttledPromiseAll<T extends readonly (() => unknown)[]>(
   ) as PromiseAllReturn<T>
 }
 
-type PromiseSettledResult<T> = {
-    status: "fulfilled"
-    value: T
-} | {
-    status: "rejected"
-    reason: unknown
-}
 type PromiseAllSettledReturn<T extends readonly (() => unknown)[]> = Promise<{ readonly [P in keyof T]: PromiseSettledResult<Awaited<ReturnType<T[P]>>> }>
 export async function throttledPromiseAllSettled<T extends readonly (() => unknown)[]>(promises: T, options: ThrottledPromiseOptions = {}): PromiseAllSettledReturn<T> {
   return await throttledPromise(promises, options, 
