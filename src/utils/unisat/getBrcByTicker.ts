@@ -1,5 +1,6 @@
 import z from "zod"
-import { throttledPromiseAllSettled } from "../throttledPromise.js"
+import { normaliseTicker, tickerLength } from "../brc-ticker.js"
+import { RateLimitContext } from "../rateLimit.js"
 import { unisatFetch } from "./unisatFetch.js"
 
 export const UnisatBrcSchema = z.object({
@@ -18,17 +19,31 @@ export const UnisatBrcSchema = z.object({
   mintTimes: z.number(),
   decimal: z.number(),
   deployHeight: z.number(),
-  deployBlocktime: z.number(),
-  completeHeight: z.number(),
-  completeBlocktime: z.number(),
-  inscriptionNumberStart: z.number(),
-  inscriptionNumberEnd: z.number()
+  deployBlocktime: z.number().optional()
 })
+export type UnisatBrcToken = z.infer<typeof UnisatBrcSchema>
 
-export async function getBrcByTicker(ticker: string) {
-  return await unisatFetch(UnisatBrcSchema, `/brc20/${encodeURIComponent(ticker)}/info`)
+export async function getBrcByTicker(ticker: string, rateLimitContext?: RateLimitContext) {
+  const path = tickerLength(ticker) === 6 ? 'brc20-prog' : 'brc20'
+  return await unisatFetch(UnisatBrcSchema, `/${path}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
 }
 
-export async function getBrcsByTicker(tickers: string[]) {
-  return await throttledPromiseAllSettled(tickers.map(ticker => () => getBrcByTicker(ticker)))
+type PromiseResult<T> = {
+    status: "fulfilled"
+    value: T
+} | {
+    status: "rejected"
+    reason: unknown
+}
+
+export async function getBrcsByTicker(tickers: string[], rateLimitContext?: RateLimitContext) {
+  const results: PromiseResult<z.output<typeof UnisatBrcSchema>>[] = []
+  for (const ticker of tickers) {
+    try {
+      results.push({ status: 'fulfilled', value: await getBrcByTicker(ticker, rateLimitContext) })
+    } catch (error) {
+      results.push({ status: "rejected", reason: error })
+    }
+  }
+  return results
 }

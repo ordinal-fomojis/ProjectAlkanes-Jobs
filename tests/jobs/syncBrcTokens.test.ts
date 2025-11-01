@@ -3,16 +3,18 @@ import { MongoMemoryServer } from "mongodb-memory-server"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { BrcToken, SyncStatus } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
-import { syncBrctokens } from "../../src/jobs/syncBrcTokens.js"
+import { syncBrcTokens } from "../../src/jobs/syncBrcTokens.js"
 import { DB_NAME } from "../../src/utils/constants.js"
 import { mapBrcTokenToDbModel } from "../../src/utils/mapBrcTokenToDbModel.js"
+import { getBlockHeight } from "../../src/utils/rpc/getBlockHeight.js"
 import { getAllBrcTokens } from "../../src/utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../../src/utils/unisat/getBestBrcBlockHeight.js"
-import { getBrcByTicker, getBrcsByTicker } from "../../src/utils/unisat/getBrcByTicker.js"
+import { getBrcByTicker, getBrcsByTicker, UnisatBrcToken } from "../../src/utils/unisat/getBrcByTicker.js"
 import { getInteractedBrcTokensInBlock } from "../../src/utils/unisat/getInteractedBrcTokensInBlock.js"
 import { MockLogger } from "../test-utils/MockLogger.js"
 import Random from "../test-utils/Random.js"
 
+vi.mock("../../src/utils/rpc/getBlockHeight.js")
 vi.mock("../../src/utils/unisat/getBestBrcBlockHeight.js")
 vi.mock("../../src/utils/unisat/getAllBrcTokens.js")
 vi.mock("../../src/utils/unisat/getBrcByTicker.js")
@@ -29,7 +31,7 @@ afterAll(async () => {
   await mongodb.stop()
 })
 
-type BaseBrcToken = Awaited<ReturnType<typeof getBrcByTicker>>
+type BaseBrcToken = UnisatBrcToken & { deployBlocktime: number }
 function randomBrcTokenResponse(ticker?: string): BaseBrcToken {
   const max = Random.randomIntLessThan(1000000000)
   const minted = Random.randomIntLessThan(max).toString(10)
@@ -49,11 +51,7 @@ function randomBrcTokenResponse(ticker?: string): BaseBrcToken {
     mintTimes: Random.randomIntLessThan(100),
     decimal: Random.randRange(1, 19),
     deployHeight: 800000,
-    deployBlocktime: new Date().getTime(),
-    completeHeight: 0,
-    completeBlocktime: 0,
-    inscriptionNumberStart: 0,
-    inscriptionNumberEnd: 0
+    deployBlocktime: new Date().getTime()
   }
 }
 
@@ -70,6 +68,7 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcToke
     await database.syncStatus.insertOne(syncStatus)
   }
 
+  vi.mocked(getBlockHeight).mockResolvedValue(currentBlockHeight)
   vi.mocked(getBestBrcBlockHeight).mockResolvedValue(currentBlockHeight)
 
   currentBrcTokens ??= Array.from({ length: 10 }, () => randomBrcTokenResponse())
@@ -104,13 +103,13 @@ describe('syncBrcTokens', () => {
   it('should do initial sync if no sync status exists', async () => {
     const { currentBrcTokens } = await setup({ syncStatus: null, currentBlockHeight: 900000, dbBrcTokens: [] })
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
       blocksSkippedOrFailed: 0,
       tokensUnsynced: 0,
-      syncedTokens: 12, // 10 from API + 2 hardcoded tokens (gamefi, gamble)
+      syncedTokens: 10,
       failedToSync: 0
     })
 
@@ -124,7 +123,7 @@ describe('syncBrcTokens', () => {
     const syncStatus = await database.syncStatus.findOne({})
     expect(syncStatus?.brcSyncBlockHeight).toBe(900000)
 
-    await database.brcToken.deleteMany({ ticker: { $in: [...currentBrcTokens.map(t => t.ticker), 'gamefi', 'gamble'] } })
+    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should update existing tokens, and add new ones when syncing', async () => {
@@ -134,7 +133,7 @@ describe('syncBrcTokens', () => {
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 7).map(x => x.ticker)))
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(3).map(x => x.ticker)))
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -147,9 +146,9 @@ describe('syncBrcTokens', () => {
     const updatedSyncStatus = await database.syncStatus.findOne({})
     expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900002)
 
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002)
-    expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens.map(x => x.ticker))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002, expect.any(Object))
+    expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens.map(x => x.ticker), expect.any(Object))
 
     for (const token of currentBrcTokens) {
       const dbToken = await database.brcToken.findOne({ ticker: token.ticker })
@@ -168,7 +167,7 @@ describe('syncBrcTokens', () => {
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 1).map(x => x.ticker)))
       .mockRejectedValueOnce(new Error('Network error'))
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -182,8 +181,8 @@ describe('syncBrcTokens', () => {
     expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900001)
 
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002)
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002, expect.any(Object))
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
@@ -191,7 +190,7 @@ describe('syncBrcTokens', () => {
   it('should handle no new blocks to sync', async () => {
     const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900000 })
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -221,7 +220,7 @@ describe('syncBrcTokens', () => {
 
     mockBrcsByTicker(currentBrcTokens, [existingFail.ticker, nonExistingFail.ticker])
     
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -262,7 +261,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -283,7 +282,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrctokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -296,135 +295,6 @@ describe('syncBrcTokens', () => {
     expect(getBrcsByTicker).not.toHaveBeenCalled()
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
-  })
-
-  it('should sync hardcoded tokens without API calls during initial sync', async () => {
-    await setup({ syncStatus: null, currentBlockHeight: 900000, dbBrcTokens: [], currentBrcTokens: [] })
-
-    const result = await syncBrctokens(new MockLogger())
-
-    expect(result).toEqual({
-      blocksSynced: 0,
-      blocksSkippedOrFailed: 0,
-      tokensUnsynced: 0,
-      syncedTokens: 2, // Only hardcoded tokens (gamefi, gamble)
-      failedToSync: 0
-    })
-
-    // Check that hardcoded tokens were inserted
-    const gamefiToken = await database.brcToken.findOne({ ticker: 'gamefi' })
-    expect(gamefiToken).toBeDefined()
-    expect(gamefiToken?.synced).toBe(true)
-    expect(gamefiToken?.initialised).toBe(true)
-    expect(gamefiToken?.max).toBe('888888888')
-    expect(gamefiToken?.limit).toBe('8888')
-    expect(gamefiToken?.minted).toBe('32064240')
-    expect(gamefiToken?.holdersCount).toBe(115)
-
-    const gambleToken = await database.brcToken.findOne({ ticker: 'gamble' })
-    expect(gambleToken).toBeDefined()
-    expect(gambleToken?.synced).toBe(true)
-    expect(gambleToken?.initialised).toBe(true)
-    expect(gambleToken?.max).toBe('4206942069')
-    expect(gambleToken?.limit).toBe('9999')
-    expect(gambleToken?.minted).toBe('5359464')
-    expect(gambleToken?.holdersCount).toBe(9)
-
-    await database.brcToken.deleteMany({ ticker: { $in: ['gamefi', 'gamble'] } })
-  })
-
-  it('should prefer hardcoded data over API for hardcoded tokens during regular sync', async () => {
-    // Setup with hardcoded tokens marked as unsynced
-    await setup({ 
-      syncStatus: { brcSyncBlockHeight: 900000 }, 
-      currentBlockHeight: 900000,
-      dbBrcTokens: [],
-      currentBrcTokens: []
-    })
-
-    // Insert unsynced hardcoded tokens
-    await database.brcToken.insertMany([
-      { 
-        ticker: 'gamefi', 
-        synced: false, 
-        initialised: false,
-        selfMint: false,
-        holdersCount: 0,
-        inscriptionNumber: 0,
-        inscriptionId: "",
-        max: "0",
-        limit: "0",
-        minted: "0",
-        totalMinted: "0",
-        confirmedMinted: "0",
-        confirmedMinted1h: "0",
-        confirmedMinted24h: "0",
-        decimal: 0,
-        deployHeight: 0,
-        completeHeight: 0,
-        completeBlocktime: 0,
-        inscriptionNumberStart: 0,
-        inscriptionNumberEnd: 0,
-        mintable: false,
-        mintedOut: false,
-        percentageMinted: 0,
-        currentMintCount: 0,
-        deployTimestamp: new Date(0),
-        tickerLength: 6
-      },
-      { 
-        ticker: 'gamble', 
-        synced: false, 
-        initialised: false,
-        selfMint: false,
-        holdersCount: 0,
-        inscriptionNumber: 0,
-        inscriptionId: "",
-        max: "0",
-        limit: "0",
-        minted: "0",
-        totalMinted: "0",
-        confirmedMinted: "0",
-        confirmedMinted1h: "0",
-        confirmedMinted24h: "0",
-        decimal: 0,
-        deployHeight: 0,
-        completeHeight: 0,
-        completeBlocktime: 0,
-        inscriptionNumberStart: 0,
-        inscriptionNumberEnd: 0,
-        mintable: false,
-        mintedOut: false,
-        percentageMinted: 0,
-        currentMintCount: 0,
-        deployTimestamp: new Date(0),
-        tickerLength: 6
-      }
-    ])
-
-    const result = await syncBrctokens(new MockLogger())
-
-    expect(result).toEqual({
-      blocksSynced: 0,
-      blocksSkippedOrFailed: 0,
-      tokensUnsynced: 0,
-      syncedTokens: 2,
-      failedToSync: 0
-    })
-
-    // Verify API was not called for hardcoded tokens
-    expect(getBrcsByTicker).not.toHaveBeenCalled()
-
-    // Verify hardcoded tokens were synced
-    const gamefiToken = await database.brcToken.findOne({ ticker: 'gamefi' })
-    expect(gamefiToken?.synced).toBe(true)
-    expect(gamefiToken?.minted).toBe('32064240') // From hardcoded data
-
-    const gambleToken = await database.brcToken.findOne({ ticker: 'gamble' })
-    expect(gambleToken?.synced).toBe(true)
-    expect(gambleToken?.minted).toBe('5359464') // From hardcoded data
-
-    await database.brcToken.deleteMany({ ticker: { $in: ['gamefi', 'gamble'] } })
   })
 })
 
@@ -446,8 +316,4 @@ function compareDbTokenData(dbToken: WithId<BrcToken> | null, token: Awaited<Ret
   expect(dbToken?.decimal).toBe(token.decimal)
   expect(dbToken?.deployHeight).toBe(token.deployHeight)
   expect(dbToken?.deployTimestamp).toBeInstanceOf(Date)
-  expect(dbToken?.completeHeight).toBe(token.completeHeight)
-  expect(dbToken?.completeBlocktime).toBe(token.completeBlocktime)
-  expect(dbToken?.inscriptionNumberStart).toBe(token.inscriptionNumberStart)
-  expect(dbToken?.inscriptionNumberEnd).toBe(token.inscriptionNumberEnd)
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import z from 'zod'
+import { createRateLimitContext } from '../../../src/utils/rateLimit.js'
 import { retrySchemaFetch } from '../../../src/utils/retryFetch.js'
-import { unisatFetch } from '../../../src/utils/unisat/unisatFetch.js'
+import { unisatFetch, UnisatRateLimitOptions } from '../../../src/utils/unisat/unisatFetch.js'
 
 vi.mock('../../../src/utils/retryFetch.js')
 
@@ -19,7 +20,7 @@ describe('unisatFetch', () => {
       address: z.string()
     })
 
-    const result = await unisatFetch(schema, '/address/bc1qtest.../balance')
+    const result = await unisatFetch(schema, '/address/bc1qtest.../balance', undefined)
     expect(result).toEqual(testData)
   })
 
@@ -33,7 +34,7 @@ describe('unisatFetch', () => {
 
     const schema = z.object({ balance: z.number() })
 
-    await expect(unisatFetch(schema, '/invalid-address/balance'))
+    await expect(unisatFetch(schema, '/invalid-address/balance', undefined))
       .rejects.toThrow(`Unisat request to /invalid-address/balance failed with message: Invalid address format`)
   })
 
@@ -46,11 +47,11 @@ describe('unisatFetch', () => {
 
     const schema = z.object({ balance: z.number() })
 
-    await expect(unisatFetch(schema, '/empty-response'))
+    await expect(unisatFetch(schema, '/empty-response', undefined))
       .rejects.toThrow('Unisat request to /empty-response failed with message: Success')
   })
 
-  it('should rate limit to 5 requests per second', async () => {
+  it('should rate limit to 2.5 requests per second', async () => {
     const testData = { balance: 1000, address: 'bc1qtest...' }
     vi.mocked(retrySchemaFetch).mockResolvedValue({
       code: 0,
@@ -65,9 +66,10 @@ describe('unisatFetch', () => {
 
     const start = performance.now()
 
-    await Promise.all(Array.from({ length: 11 }, () =>
-      unisatFetch(schema, '/address/bc1qtest.../balance')
-    ))
+    const context = createRateLimitContext(UnisatRateLimitOptions)
+    for (let i = 0; i < 6; i++) {
+      await unisatFetch(schema, '/address/bc1qtest.../balance', context)
+    }
     expect(performance.now() - start).toBeGreaterThanOrEqual(2000)
   })
 })

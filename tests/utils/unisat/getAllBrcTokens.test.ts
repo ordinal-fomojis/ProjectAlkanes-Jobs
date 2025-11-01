@@ -37,22 +37,29 @@ describe('getAllBrcTokens', () => {
       mockBrcToken('SATS'),
       mockBrcToken('PEPE')
     ]
+    const sixByteMockTokens = [
+      mockBrcToken('potato'),
+      mockBrcToken('banana')
+    ]
 
-    const mockResponse = {
-      total: 3,
-      detail: mockTokens
-    }
-
-    vi.mocked(unisatFetch).mockResolvedValueOnce(mockResponse)
+    vi.mocked(unisatFetch)
+      .mockResolvedValueOnce({ total: 3, detail: mockTokens })
+      .mockResolvedValueOnce({ total: 2, detail: sixByteMockTokens })
 
     const result = await getAllBrcTokens()
 
-    expect(result).toEqual(mockTokens)
-    expect(result).toHaveLength(3)
-    expect(unisatFetch).toHaveBeenCalledTimes(1)
+    expect(result).toEqual(mockTokens.concat(sixByteMockTokens))
+    expect(result).toHaveLength(5)
+    expect(unisatFetch).toHaveBeenCalledTimes(2)
     expect(unisatFetch).toHaveBeenCalledWith(
       expect.any(Object), // Schema
-      '/brc20/status?start=0&limit=500&sort=deploy'
+      '/brc20/status?start=0&limit=500&sort=deploy',
+      undefined
+    )
+    expect(unisatFetch).toHaveBeenCalledWith(
+      expect.any(Object), // Schema
+      '/brc20-prog/status?start=0&limit=500&sort=deploy',
+      undefined
     )
   })
 
@@ -73,6 +80,7 @@ describe('getAllBrcTokens', () => {
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(firstPageResponse)
       .mockResolvedValueOnce(secondPageResponse)
+      .mockResolvedValueOnce({ total: 0, detail: [] })
 
     const result = await getAllBrcTokens()
 
@@ -82,18 +90,27 @@ describe('getAllBrcTokens', () => {
     expect(result[500]).toEqual(secondPageTokens[0])
     expect(result[749]).toEqual(secondPageTokens[249])
     
-    expect(unisatFetch).toHaveBeenCalledTimes(2)
+    expect(unisatFetch).toHaveBeenCalledTimes(3)
     
     // Verify first page call
     expect(unisatFetch).toHaveBeenNthCalledWith(1, 
       expect.any(Object),
-      '/brc20/status?start=0&limit=500&sort=deploy'
+      '/brc20/status?start=0&limit=500&sort=deploy',
+      undefined
     )
     
     // Verify second page call
     expect(unisatFetch).toHaveBeenNthCalledWith(2,
       expect.any(Object),
-      '/brc20/status?start=500&limit=500&sort=deploy'
+      '/brc20/status?start=500&limit=500&sort=deploy',
+      undefined
+    )
+
+    // Verify 6-byte tokens call
+    expect(unisatFetch).toHaveBeenNthCalledWith(3,
+      expect.any(Object),
+      '/brc20-prog/status?start=0&limit=500&sort=deploy',
+      undefined
     )
   })
 
@@ -103,12 +120,14 @@ describe('getAllBrcTokens', () => {
       detail: []
     }
 
-    vi.mocked(unisatFetch).mockResolvedValueOnce(mockResponse)
+    vi.mocked(unisatFetch)
+      .mockResolvedValueOnce(mockResponse)
+      .mockResolvedValueOnce(mockResponse)
 
     const result = await getAllBrcTokens()
 
     expect(result).toEqual([])
     expect(result).toHaveLength(0)
-    expect(unisatFetch).toHaveBeenCalledTimes(1)
+    expect(unisatFetch).toHaveBeenCalledTimes(2)
   })
 })

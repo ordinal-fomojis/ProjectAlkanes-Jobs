@@ -42,6 +42,8 @@ export async function throttledPromiseAllSettled<T extends readonly (() => unkno
 type OnComplete = (result: unknown, finished: unknown[], index: number, reject: (reason: unknown) => void) => void
 
 async function throttledPromise(promises: readonly (() => unknown)[], options: ThrottledPromiseOptions, onResolve: OnComplete, onReject: OnComplete) {
+  if (promises.length === 0) return []
+  
   const limit = options.limit ?? DEFAULT_THROTTLE_LIMIT
   return new Promise((resolve, reject) => {
     const todo = promises.map((promise, i) => ({ promise, i }))

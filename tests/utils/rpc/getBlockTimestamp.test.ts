@@ -29,7 +29,7 @@ describe('getBlockTimestamp', () => {
     )
     expect(callRpc).toHaveBeenNthCalledWith(2,
       expect.any(z.ZodType),
-      'getblockheader',
+      'btc_getblockheader',
       [hash]
     )
 

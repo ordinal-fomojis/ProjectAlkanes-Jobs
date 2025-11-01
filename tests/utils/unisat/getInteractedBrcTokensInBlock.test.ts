@@ -16,16 +16,32 @@ describe('getInteractedTokensInBlock', () => {
       ]
     }
 
-    vi.mocked(unisatFetch).mockResolvedValueOnce(mockResponse)
+    const sixByteMockResponse = {
+      total: 2,
+      detail: [
+        { ticker: 'potato' },
+        { ticker: 'banana' }
+      ]
+    }
+
+    vi.mocked(unisatFetch)
+      .mockResolvedValueOnce(mockResponse)
+      .mockResolvedValueOnce(sixByteMockResponse)
 
     const result = await getInteractedBrcTokensInBlock(850000)
 
     expect(result).toBeInstanceOf(Set)
-    expect(result).toEqual(new Set(['ORDI', 'SATS', 'PEPE']))
-    expect(unisatFetch).toHaveBeenCalledTimes(1)
+    expect(result).toEqual(new Set(['ORDI', 'SATS', 'PEPE', 'potato', 'banana']))
+    expect(unisatFetch).toHaveBeenCalledTimes(2)
     expect(unisatFetch).toHaveBeenCalledWith(
       expect.any(Object), // Schema
-      '/brc20/history-by-height/850000?start=0&limit=500'
+      '/brc20/history-by-height/850000?start=0&limit=500',
+      undefined
+    )
+    expect(unisatFetch).toHaveBeenCalledWith(
+      expect.any(Object), // Schema
+      '/brc20-prog/history-by-height/850000?start=0&limit=500',
+      undefined
     )
   })
 
@@ -43,21 +59,30 @@ describe('getInteractedTokensInBlock', () => {
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(firstPageResponse)
       .mockResolvedValueOnce(secondPageResponse)
+      .mockResolvedValueOnce({ total: 0, detail: [] })
 
     const result = await getInteractedBrcTokensInBlock(850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(750)
-    expect(unisatFetch).toHaveBeenCalledTimes(2)
+    expect(unisatFetch).toHaveBeenCalledTimes(3)
     
     expect(unisatFetch).toHaveBeenNthCalledWith(1, 
       expect.any(Object),
-      '/brc20/history-by-height/850000?start=0&limit=500'
+      '/brc20/history-by-height/850000?start=0&limit=500',
+      undefined
     )
     
     expect(unisatFetch).toHaveBeenNthCalledWith(2,
       expect.any(Object),
-      '/brc20/history-by-height/850000?start=500&limit=500'
+      '/brc20/history-by-height/850000?start=500&limit=500',
+      undefined
+    )
+
+    expect(unisatFetch).toHaveBeenNthCalledWith(3,
+      expect.any(Object),
+      '/brc20-prog/history-by-height/850000?start=0&limit=500',
+      undefined
     )
   })
 
@@ -67,13 +92,15 @@ describe('getInteractedTokensInBlock', () => {
       detail: []
     }
 
-    vi.mocked(unisatFetch).mockResolvedValueOnce(mockResponse)
+    vi.mocked(unisatFetch)
+      .mockResolvedValueOnce(mockResponse)
+      .mockResolvedValueOnce(mockResponse)
 
     const result = await getInteractedBrcTokensInBlock(850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(0)
-    expect(unisatFetch).toHaveBeenCalledTimes(1)
+    expect(unisatFetch).toHaveBeenCalledTimes(2)
   })
 
   it('should deduplicate tickers across pages', async () => {
@@ -96,6 +123,7 @@ describe('getInteractedTokensInBlock', () => {
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(firstPageResponse)
       .mockResolvedValueOnce(secondPageResponse)
+      .mockResolvedValueOnce({ total: 0, detail: [] })
 
     const result = await getInteractedBrcTokensInBlock(850000)
 
