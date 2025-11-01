@@ -28,8 +28,16 @@ export async function getBrcByTicker(ticker: string, rateLimitContext?: RateLimi
   return await unisatFetch(UnisatBrcSchema, `/${path}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
 }
 
+type PromiseResult<T> = {
+    status: "fulfilled"
+    value: T
+} | {
+    status: "rejected"
+    reason: unknown
+}
+
 export async function getBrcsByTicker(tickers: string[], rateLimitContext?: RateLimitContext) {
-  const results: PromiseSettledResult<z.output<typeof UnisatBrcSchema>>[] = []
+  const results: PromiseResult<z.output<typeof UnisatBrcSchema>>[] = []
   for (const ticker of tickers) {
     try {
       results.push({ status: 'fulfilled', value: await getBrcByTicker(ticker, rateLimitContext) })
