@@ -146,9 +146,9 @@ describe('syncBrcTokens', () => {
     const updatedSyncStatus = await database.syncStatus.findOne({})
     expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900002)
 
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002)
-    expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens.map(x => x.ticker))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002, expect.any(Object))
+    expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens.map(x => x.ticker), expect.any(Object))
 
     for (const token of currentBrcTokens) {
       const dbToken = await database.brcToken.findOne({ ticker: token.ticker })
@@ -181,8 +181,8 @@ describe('syncBrcTokens', () => {
     expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900001)
 
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002)
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002, expect.any(Object))
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })

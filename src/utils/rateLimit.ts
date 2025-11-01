@@ -38,13 +38,12 @@ export function createRateLimitContext(options: RateLimitOptions): RateLimitCont
     isRateLimitError: (error: unknown): error is RequestError =>
       error instanceof RequestError && (options.isRateLimitError?.(error) === true || error.status === 429),
     wait: async () => {
-      if (context.lastRequestTime == null)
-        return
-      const elapsedTime = performance.now() - context.lastRequestTime
-      const delay = Math.max(0, context.rateLimitMs - elapsedTime)
-      if (delay === 0) return
-      
-      await new Promise(r => setTimeout(r, delay))
+      const delay = context.lastRequestTime == null ? null
+        : Math.max(0, context.rateLimitMs - (performance.now() - context.lastRequestTime))
+        
+      if (delay != null && delay > 0)
+        await new Promise(r => setTimeout(r, delay))
+
       context.lastRequestTime = performance.now()
     },
     retryOptions: {

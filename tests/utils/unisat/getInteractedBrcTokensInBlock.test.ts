@@ -35,11 +35,13 @@ describe('getInteractedTokensInBlock', () => {
     expect(unisatFetch).toHaveBeenCalledTimes(2)
     expect(unisatFetch).toHaveBeenCalledWith(
       expect.any(Object), // Schema
-      '/brc20/history-by-height/850000?start=0&limit=500'
+      '/brc20/history-by-height/850000?start=0&limit=500',
+      undefined
     )
     expect(unisatFetch).toHaveBeenCalledWith(
       expect.any(Object), // Schema
-      '/brc20-prog/history-by-height/850000?start=0&limit=500'
+      '/brc20-prog/history-by-height/850000?start=0&limit=500',
+      undefined
     )
   })
 
@@ -67,17 +69,20 @@ describe('getInteractedTokensInBlock', () => {
     
     expect(unisatFetch).toHaveBeenNthCalledWith(1, 
       expect.any(Object),
-      '/brc20/history-by-height/850000?start=0&limit=500'
+      '/brc20/history-by-height/850000?start=0&limit=500',
+      undefined
     )
     
     expect(unisatFetch).toHaveBeenNthCalledWith(2,
       expect.any(Object),
-      '/brc20/history-by-height/850000?start=500&limit=500'
+      '/brc20/history-by-height/850000?start=500&limit=500',
+      undefined
     )
 
     expect(unisatFetch).toHaveBeenNthCalledWith(3,
       expect.any(Object),
-      '/brc20-prog/history-by-height/850000?start=0&limit=500'
+      '/brc20-prog/history-by-height/850000?start=0&limit=500',
+      undefined
     )
   })
 

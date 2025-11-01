@@ -53,11 +53,13 @@ describe('getAllBrcTokens', () => {
     expect(unisatFetch).toHaveBeenCalledTimes(2)
     expect(unisatFetch).toHaveBeenCalledWith(
       expect.any(Object), // Schema
-      '/brc20/status?start=0&limit=500&sort=deploy'
+      '/brc20/status?start=0&limit=500&sort=deploy',
+      undefined
     )
     expect(unisatFetch).toHaveBeenCalledWith(
       expect.any(Object), // Schema
-      '/brc20-prog/status?start=0&limit=500&sort=deploy'
+      '/brc20-prog/status?start=0&limit=500&sort=deploy',
+      undefined
     )
   })
 
@@ -93,19 +95,22 @@ describe('getAllBrcTokens', () => {
     // Verify first page call
     expect(unisatFetch).toHaveBeenNthCalledWith(1, 
       expect.any(Object),
-      '/brc20/status?start=0&limit=500&sort=deploy'
+      '/brc20/status?start=0&limit=500&sort=deploy',
+      undefined
     )
     
     // Verify second page call
     expect(unisatFetch).toHaveBeenNthCalledWith(2,
       expect.any(Object),
-      '/brc20/status?start=500&limit=500&sort=deploy'
+      '/brc20/status?start=500&limit=500&sort=deploy',
+      undefined
     )
 
     // Verify 6-byte tokens call
     expect(unisatFetch).toHaveBeenNthCalledWith(3,
       expect.any(Object),
-      '/brc20-prog/status?start=0&limit=500&sort=deploy'
+      '/brc20-prog/status?start=0&limit=500&sort=deploy',
+      undefined
     )
   })
 
