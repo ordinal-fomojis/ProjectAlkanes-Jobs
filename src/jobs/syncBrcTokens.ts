@@ -3,11 +3,13 @@ import { database } from "../database/database.js"
 import { Logger } from "../utils/Logger.js"
 import { mapBrcTokenToDbModel } from "../utils/mapBrcTokenToDbModel.js"
 import { populateBrcTimestamp } from "../utils/populateBrcTimestamp.js"
+import { createRateLimitContext, RateLimitContext } from "../utils/rateLimit.js"
 import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
 import { getAllBrcTokens } from "../utils/unisat/getAllBrcTokens.js"
 import { getBestBrcBlockHeight } from "../utils/unisat/getBestBrcBlockHeight.js"
 import { getBrcsByTicker } from "../utils/unisat/getBrcByTicker.js"
 import { getInteractedBrcTokensInBlock } from "../utils/unisat/getInteractedBrcTokensInBlock.js"
+import { UnisatRateLimitOptions } from "../utils/unisat/unisatFetch.js"
 
 const MAX_TOKENS_PER_SYNC = 50
 
@@ -36,19 +38,21 @@ const DEFAULT_BRC_TOKEN = {
 
 export async function syncBrcTokens(log: Logger) {
   log.info("Starting BRC token sync...")
+  const rateLimitContext = createRateLimitContext(UnisatRateLimitOptions)
+
   const lastSyncBlockHeight = (await database.syncStatus.findOne())?.brcSyncBlockHeight ?? null
   log.info(`Last synced block height: ${lastSyncBlockHeight?.toString() ?? 'none'}`)
-  const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight)
+  const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight, rateLimitContext)
   log.info(`Current block height: ${currentBlockHeight.toString()}`)
 
   if (lastSyncBlockHeight == null) {
-    const tokenCount = await initialSync(log, currentBlockHeight)
+    const tokenCount = await initialSync(log, currentBlockHeight, rateLimitContext)
     return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
   }
   else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
-      = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight)
-    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log)
+      = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight, rateLimitContext)
+    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, rateLimitContext)
     return {
       blocksSynced,
       blocksSkippedOrFailed,
@@ -60,13 +64,13 @@ export async function syncBrcTokens(log: Logger) {
 }
 
 // Fetches tokens interacted with in new blocks. These are marked as unsynced, and the synced block height is updated.
-async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: number) {
+async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: number, rateLimitContext: RateLimitContext) {
   const tickers = new Set<string>()
   let syncedUpTo = lastSyncHeight
   for (let height = lastSyncHeight + 1; height <= currentHeight; height++) {
     try {
       log.info(`Syncing block height: ${height.toString()}`)
-      const tickersThisBlock = await getInteractedBrcTokensInBlock(height)
+      const tickersThisBlock = await getInteractedBrcTokensInBlock(height, rateLimitContext)
       log.info(`Found ${tickersThisBlock.size} tokens in block height ${height.toString()}`)
       tickersThisBlock.forEach(ticker => tickers.add(ticker))
       syncedUpTo = height
@@ -109,7 +113,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: tickers.size }
 }
 
-async function syncUnsyncedBrcTokens(log: Logger) {
+async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitContext) {
   const unsyncedTokens = await database.brcToken.find({ synced: false })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
 
@@ -119,7 +123,7 @@ async function syncUnsyncedBrcTokens(log: Logger) {
   }
   log.info(`Syncing ${unsyncedTokens.length} unsynced BRC tokens`)
 
-  const tokens = await getBrcsByTicker(unsyncedTokens.map(t => t.ticker))
+  const tokens = await getBrcsByTicker(unsyncedTokens.map(t => t.ticker), rateLimitContext)
   const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
   const failedTokens = tokens.filter(r => r.status === 'rejected').map(r => r.reason)
 
@@ -149,9 +153,9 @@ async function syncUnsyncedBrcTokens(log: Logger) {
   return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
 }
 
-async function initialSync(log: Logger, blockHeight: number) {
+async function initialSync(log: Logger, blockHeight: number, rateLimitContext: RateLimitContext) {
   log.info(`First sync. Performing initial sync.`)
-  const tokens = await populateBrcTimestamp(await getAllBrcTokens(), [])
+  const tokens = await populateBrcTimestamp(await getAllBrcTokens(rateLimitContext), [])
   log.info(`Fetched ${tokens.length} BRC tokens.`)
   
   await database.withTransaction(async () => {
@@ -177,7 +181,7 @@ async function initialSync(log: Logger, blockHeight: number) {
   return tokens.length
 }
 
-async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null) {
+async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null, rateLimitContext: RateLimitContext) {
   const actualBlockHeight = await getBlockHeight()
 
   // If we have synced up to the actual block height, then it's not possible for there to be unsynced blocks,
@@ -188,11 +192,11 @@ async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null) {
 
   // Similar logic for BRC block height. Assume if we've synced up to it,
   // then there are also no 6 byte BRC blocks to sync. Might not be true, but it will save unnecessary API calls.
-  const brcBlockHeight = await getBestBrcBlockHeight()
+  const brcBlockHeight = await getBestBrcBlockHeight('default', rateLimitContext)
   if (lastSyncedBlockHeight != null && lastSyncedBlockHeight >= brcBlockHeight) {
     return brcBlockHeight
   }
 
-  const sixByteBrcBlockHeight = await getBestBrcBlockHeight('6-byte')
+  const sixByteBrcBlockHeight = await getBestBrcBlockHeight('6-byte', rateLimitContext)
   return Math.min(brcBlockHeight, sixByteBrcBlockHeight)
 }

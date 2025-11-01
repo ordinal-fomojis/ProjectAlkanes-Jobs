@@ -1,5 +1,6 @@
 import z from "zod"
 import { normaliseTicker } from "../brc-ticker.js"
+import { RateLimitContext } from "../rateLimit.js"
 import { UnisatBrcSchema } from "./getBrcByTicker.js"
 import { unisatFetch } from "./unisatFetch.js"
 
@@ -10,19 +11,19 @@ const Schema = z.object({
 
 const PAGE_SIZE = 500
 
-export async function getAllBrcTokens() {
-  const defaultTokens = await getAllBrcTokensByType('default')
-  const sixByteTokens = await getAllBrcTokensByType('6-byte')
+export async function getAllBrcTokens(rateLimitContext?: RateLimitContext) {
+  const defaultTokens = await getAllBrcTokensByType('default', rateLimitContext)
+  const sixByteTokens = await getAllBrcTokensByType('6-byte', rateLimitContext)
   return [...defaultTokens, ...sixByteTokens]
 }
 
-async function getAllBrcTokensByType(type: 'default' | '6-byte') {
+async function getAllBrcTokensByType(type: 'default' | '6-byte', rateLimitContext: RateLimitContext | undefined) {
   const tokens: z.infer<typeof UnisatBrcSchema>[] = []
-  const { total, detail } = await getPagedBrcTokens(0, type)
+  const { total, detail } = await getPagedBrcTokens(0, type, rateLimitContext)
   tokens.push(...detail)
   let page = 1
   while (tokens.length < total) {
-    const { detail: nextDetail } = await getPagedBrcTokens(page, type)
+    const { detail: nextDetail } = await getPagedBrcTokens(page, type, rateLimitContext)
     tokens.push(...nextDetail)
     page++
   }
@@ -32,7 +33,7 @@ async function getAllBrcTokensByType(type: 'default' | '6-byte') {
   return tokens
 }
 
-async function getPagedBrcTokens(page: number, type: 'default' | '6-byte') {
+async function getPagedBrcTokens(page: number, type: 'default' | '6-byte', rateLimitContext: RateLimitContext | undefined) {
   const path = type === '6-byte' ? 'brc20-prog' : 'brc20'
-  return await unisatFetch(Schema, `/${path}/status?start=${page * PAGE_SIZE}&limit=${PAGE_SIZE}&sort=deploy`)
+  return await unisatFetch(Schema, `/${path}/status?start=${page * PAGE_SIZE}&limit=${PAGE_SIZE}&sort=deploy`, rateLimitContext)
 }

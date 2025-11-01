@@ -5,11 +5,11 @@ export const DEFAULT_RETRY_FETCH_TIMES = 4
 
 export class RequestError extends Error {
   constructor(public status: number, public text: string, public url: string) {
-    super(`Request failed with error ${status.toString()}: ${text}`)
+    super(`Request to ${url} failed with error ${status.toString()}: ${text}`)
   }
 }
 
-interface RetryFetchOptions {
+export interface RetryFetchOptions {
   retries?: number
   retryCondition?: (error: unknown, base: () => boolean) => Promise<boolean> | boolean
   delay?: (attempt: number, error: unknown, base: () => number) => Promise<number> | number
