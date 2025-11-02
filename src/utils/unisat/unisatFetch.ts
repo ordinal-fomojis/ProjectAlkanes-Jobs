@@ -8,7 +8,7 @@ export const UnisatRateLimitOptions: RateLimitOptions = {
     if (error.status !== 403) return false
     try {
       const err = JSON.parse(error.text) as { code?: number }
-      return err.code === -2005
+      return err.code === -2006
     } catch {
       return false
     }

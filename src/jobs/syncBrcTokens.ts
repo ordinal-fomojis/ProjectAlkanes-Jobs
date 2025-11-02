@@ -141,6 +141,7 @@ async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitCon
 
   const tokensWithTimestamps = await populateBrcTimestamp(successfulTokens, unsyncedTokens)
 
+  log.info(`Saving ${tokensWithTimestamps.length} tickers to the database`)
   await database.brcToken.bulkWrite(tokensWithTimestamps.map(token => {
     return {
       updateOne: {
