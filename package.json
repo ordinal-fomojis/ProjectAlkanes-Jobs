@@ -15,7 +15,7 @@
     "plop": "cross-env NODE_OPTIONS='--import tsx' plop --plopfile=plopfile.ts"
   },
   "dependencies": {
-    "@azure/functions": "^4.8.2",
+    "@azure/functions": "^4.9.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "bitcoinjs-lib": "^7.0.0",
     "js-big-decimal": "^2.2.0",
