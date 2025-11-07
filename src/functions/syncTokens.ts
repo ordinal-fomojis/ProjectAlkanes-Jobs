@@ -4,5 +4,6 @@ import { registerJob } from "./registerJob.js"
 
 registerJob({ syncTokens: async log => {
   await syncAlkaneTokens(log)
-  await syncBrcTokens(log)
+  await syncBrcTokens(log, 'default')
+  await syncBrcTokens(log, 'prog')
 }})

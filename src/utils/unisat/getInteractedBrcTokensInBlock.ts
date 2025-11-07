@@ -23,7 +23,7 @@ export async function getInteractedBrcTokensInBlock(type: BrcType, height: numbe
     tickers.push(...nextDetail.map(d => d.ticker))
     page++
   }
-  return tickers.map(normaliseTicker)
+  return new Set(tickers.map(normaliseTicker))
 }
 
 async function getBrcHistoryByHeightPaged(type: BrcType, height: number, page: number, rateLimitContext: RateLimitContext | undefined) {
