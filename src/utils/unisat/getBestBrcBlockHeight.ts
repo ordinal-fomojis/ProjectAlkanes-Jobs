@@ -1,12 +1,12 @@
 import z from "zod"
+import { BrcType } from "../constants.js"
 import { RateLimitContext } from "../rateLimit.js"
-import { unisatFetch } from "./unisatFetch.js"
+import { UnisatBrcPath, unisatFetch } from "./unisatFetch.js"
 
 const Schema = z.object({
   height: z.number()
 })
 
-export async function getBestBrcBlockHeight(type: 'default' | '6-byte', rateLimitContext?: RateLimitContext) {
-  const path = type === '6-byte' ? 'brc20-prog' : 'brc20'
-  return (await unisatFetch(Schema, `/${path}/bestheight`, rateLimitContext)).height
+export async function getBestBrcBlockHeight(type: BrcType, rateLimitContext?: RateLimitContext) {
+  return (await unisatFetch(Schema, `${UnisatBrcPath[type]}/bestheight`, rateLimitContext)).height
 }

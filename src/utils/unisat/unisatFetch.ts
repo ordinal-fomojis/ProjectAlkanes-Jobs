@@ -1,6 +1,11 @@
 import { z } from "zod"
-import { BITCOIN_NETWORK, UNISAT_API_KEY } from "../constants.js"
+import { BITCOIN_NETWORK, BrcType, UNISAT_API_KEY } from "../constants.js"
 import { createRateLimitContext, RateLimitContext, rateLimitFetch, RateLimitOptions } from "../rateLimit.js"
+
+export const UnisatBrcPath = {
+  [BrcType.Default]: '/brc20',
+  [BrcType.Prog]: '/brc20-prog'
+}
 
 export const UnisatRateLimitOptions: RateLimitOptions = {
   requestsPerSecond: 2.5,
