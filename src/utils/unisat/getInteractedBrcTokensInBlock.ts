@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { normaliseTicker } from "../brc-ticker.js"
 import { BrcType } from "../constants.js"
-import { RateLimitContext } from "../rateLimit.js"
-import { UnisatBrcPath, unisatFetch } from "./unisatFetch.js"
+import { createRateLimitContext, RateLimitContext } from "../rateLimit.js"
+import { UnisatBrcPath, unisatFetch, UnisatRateLimitOptions } from "./unisatFetch.js"
 
 const Schema = z.object({
   total: z.number(),
@@ -13,7 +13,9 @@ const Schema = z.object({
 
 const PAGE_SIZE = 500
 
-export async function getInteractedBrcTokensInBlock(type: BrcType, height: number, rateLimitContext: RateLimitContext | undefined) {
+export async function getInteractedBrcTokensInBlock(type: BrcType, height: number, rateLimitContext?: RateLimitContext) {
+  rateLimitContext ??= createRateLimitContext(UnisatRateLimitOptions)
+
   const tickers: string[] = []
   const { total, detail } = await getBrcHistoryByHeightPaged(type, height, 0, rateLimitContext)
   tickers.push(...detail.map(d => d.ticker))
@@ -26,6 +28,6 @@ export async function getInteractedBrcTokensInBlock(type: BrcType, height: numbe
   return new Set(tickers.map(normaliseTicker))
 }
 
-async function getBrcHistoryByHeightPaged(type: BrcType, height: number, page: number, rateLimitContext: RateLimitContext | undefined) {
+async function getBrcHistoryByHeightPaged(type: BrcType, height: number, page: number, rateLimitContext: RateLimitContext) {
   return await unisatFetch(Schema, `${UnisatBrcPath[type]}/history-by-height/${height}?start=${page * PAGE_SIZE}&limit=${PAGE_SIZE}`, rateLimitContext)
 }

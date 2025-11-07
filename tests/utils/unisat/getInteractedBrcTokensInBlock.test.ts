@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { BrcType } from '../../../src/utils/constants.js'
 import { getInteractedBrcTokensInBlock } from '../../../src/utils/unisat/getInteractedBrcTokensInBlock.js'
 import { unisatFetch } from '../../../src/utils/unisat/unisatFetch.js'
 
@@ -28,7 +29,7 @@ describe('getInteractedTokensInBlock', () => {
       .mockResolvedValueOnce(mockResponse)
       .mockResolvedValueOnce(sixByteMockResponse)
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(BrcType.Default, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result).toEqual(new Set(['ORDI', 'SATS', 'PEPE', 'potato', 'banana']))
@@ -61,7 +62,7 @@ describe('getInteractedTokensInBlock', () => {
       .mockResolvedValueOnce(secondPageResponse)
       .mockResolvedValueOnce({ total: 0, detail: [] })
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(BrcType.Default, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(750)
@@ -96,7 +97,7 @@ describe('getInteractedTokensInBlock', () => {
       .mockResolvedValueOnce(mockResponse)
       .mockResolvedValueOnce(mockResponse)
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(BrcType.Default, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(0)
@@ -125,7 +126,7 @@ describe('getInteractedTokensInBlock', () => {
       .mockResolvedValueOnce(secondPageResponse)
       .mockResolvedValueOnce({ total: 0, detail: [] })
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(BrcType.Default, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(3)

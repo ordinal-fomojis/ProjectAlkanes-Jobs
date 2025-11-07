@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { BrcType } from '../../../src/utils/constants.js'
 import { getAllBrcTokens } from '../../../src/utils/unisat/getAllBrcTokens.js'
 import { unisatFetch } from '../../../src/utils/unisat/unisatFetch.js'
 import Random from '../../test-utils/Random.js'
@@ -46,7 +47,7 @@ describe('getAllBrcTokens', () => {
       .mockResolvedValueOnce({ total: 3, detail: mockTokens })
       .mockResolvedValueOnce({ total: 2, detail: sixByteMockTokens })
 
-    const result = await getAllBrcTokens()
+    const result = await getAllBrcTokens(BrcType.Default)
 
     expect(result).toEqual(mockTokens.concat(sixByteMockTokens))
     expect(result).toHaveLength(5)
@@ -82,7 +83,7 @@ describe('getAllBrcTokens', () => {
       .mockResolvedValueOnce(secondPageResponse)
       .mockResolvedValueOnce({ total: 0, detail: [] })
 
-    const result = await getAllBrcTokens()
+    const result = await getAllBrcTokens(BrcType.Default)
 
     expect(result).toHaveLength(750)
     expect(result[0]).toEqual(firstPageTokens[0])
@@ -124,7 +125,7 @@ describe('getAllBrcTokens', () => {
       .mockResolvedValueOnce(mockResponse)
       .mockResolvedValueOnce(mockResponse)
 
-    const result = await getAllBrcTokens()
+    const result = await getAllBrcTokens(BrcType.Default)
 
     expect(result).toEqual([])
     expect(result).toHaveLength(0)

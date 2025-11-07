@@ -1,9 +1,9 @@
 import z from "zod"
 import { normaliseTicker } from "../brc-ticker.js"
 import { BrcType } from "../constants.js"
-import { RateLimitContext } from "../rateLimit.js"
+import { createRateLimitContext, RateLimitContext } from "../rateLimit.js"
 import { UnisatBrcSchema } from "./getBrcByTicker.js"
-import { UnisatBrcPath, unisatFetch } from "./unisatFetch.js"
+import { UnisatBrcPath, unisatFetch, UnisatRateLimitOptions } from "./unisatFetch.js"
 
 const Schema = z.object({
   total: z.number(),
@@ -12,7 +12,9 @@ const Schema = z.object({
 
 const PAGE_SIZE = 500
 
-export async function getAllBrcTokens(type: BrcType, rateLimitContext: RateLimitContext | undefined) {
+export async function getAllBrcTokens(type: BrcType, rateLimitContext?: RateLimitContext) {
+  rateLimitContext ??= createRateLimitContext(UnisatRateLimitOptions)
+
   const tokens: z.infer<typeof UnisatBrcSchema>[] = []
   const { total, detail } = await getPagedBrcTokens(0, type, rateLimitContext)
   tokens.push(...detail)
@@ -28,6 +30,6 @@ export async function getAllBrcTokens(type: BrcType, rateLimitContext: RateLimit
   return tokens
 }
 
-async function getPagedBrcTokens(page: number, type: BrcType, rateLimitContext: RateLimitContext | undefined) {
+async function getPagedBrcTokens(page: number, type: BrcType, rateLimitContext: RateLimitContext) {
   return await unisatFetch(Schema, `${UnisatBrcPath[type]}/status?start=${page * PAGE_SIZE}&limit=${PAGE_SIZE}&sort=deploy`, rateLimitContext)
 }

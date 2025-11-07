@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { BrcToken, SyncStatus } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
 import { syncBrcTokens } from "../../src/jobs/syncBrcTokens.js"
-import { DB_NAME } from "../../src/utils/constants.js"
+import { BrcType, DB_NAME } from "../../src/utils/constants.js"
 import { mapBrcTokenToDbModel } from "../../src/utils/mapBrcTokenToDbModel.js"
 import { getBlockHeight } from "../../src/utils/rpc/getBlockHeight.js"
 import { getAllBrcTokens } from "../../src/utils/unisat/getAllBrcTokens.js"
@@ -103,7 +103,7 @@ describe('syncBrcTokens', () => {
   it('should do initial sync if no sync status exists', async () => {
     const { currentBrcTokens } = await setup({ syncStatus: null, currentBlockHeight: 900000, dbBrcTokens: [] })
 
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -127,13 +127,16 @@ describe('syncBrcTokens', () => {
   })
 
   it('should update existing tokens, and add new ones when syncing', async () => {
-    const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900002 })
+    const { currentBrcTokens } = await setup({
+      syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
+      currentBlockHeight: 900002
+    })
     
     vi.mocked(getInteractedBrcTokensInBlock)
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 7).map(x => x.ticker)))
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(3).map(x => x.ticker)))
 
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -161,13 +164,16 @@ describe('syncBrcTokens', () => {
   })
 
   it('should handle block sync errors gracefully', async () => {
-    const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900003 })
+    const { currentBrcTokens } = await setup({
+      syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
+      currentBlockHeight: 900003
+    })
 
     vi.mocked(getInteractedBrcTokensInBlock)
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 1).map(x => x.ticker)))
       .mockRejectedValueOnce(new Error('Network error'))
 
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -188,9 +194,12 @@ describe('syncBrcTokens', () => {
   })
 
   it('should handle no new blocks to sync', async () => {
-    const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900000 })
+    const { currentBrcTokens } = await setup({
+      syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
+      currentBlockHeight: 900000
+    })
 
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -206,7 +215,10 @@ describe('syncBrcTokens', () => {
   })
 
   it('should sync unsynced tokens with mixed success and failure', async () => {
-    const { currentBrcTokens, dbBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900001 })
+    const { currentBrcTokens, dbBrcTokens } = await setup({
+      syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
+      currentBlockHeight: 900001
+    })
 
     const nonExistingTokens = currentBrcTokens.filter(token => !dbBrcTokens.some(dbToken => dbToken.ticker === token.ticker))
     const existingTokens = currentBrcTokens.filter(token => dbBrcTokens.some(dbToken => dbToken.ticker === token.ticker))
@@ -220,7 +232,7 @@ describe('syncBrcTokens', () => {
 
     mockBrcsByTicker(currentBrcTokens, [existingFail.ticker, nonExistingFail.ticker])
     
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -252,7 +264,10 @@ describe('syncBrcTokens', () => {
   })
 
   it('should handle empty blocks with no token interactions', async () => {
-    const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900002 })
+    const { currentBrcTokens } = await setup({
+      syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
+      currentBlockHeight: 900002
+    })
 
     // Mock empty blocks
     vi.mocked(getInteractedBrcTokensInBlock)
@@ -261,7 +276,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -278,11 +293,14 @@ describe('syncBrcTokens', () => {
   })
 
   it('should handle no unsynced tokens', async () => {
-    const { currentBrcTokens } = await setup({ syncStatus: { brcSyncBlockHeight: 900000 }, currentBlockHeight: 900000 })
+    const { currentBrcTokens } = await setup({
+      syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
+      currentBlockHeight: 900000
+    })
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrcTokens(new MockLogger())
+    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
 
     expect(result).toEqual({
       blocksSynced: 0,
