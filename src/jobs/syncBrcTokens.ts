@@ -42,7 +42,7 @@ export async function syncBrcTokens(log: Logger, type: BrcType) {
   const rateLimitContext = createRateLimitContext(UnisatRateLimitOptions)
 
   const syncStatus = await database.syncStatus.findOne()
-  const lastSyncBlockHeight = (type === 'default'
+  const lastSyncBlockHeight = (type === BrcType.Default
     ? syncStatus?.brcSyncBlockHeight
     : syncStatus?.brcProgSyncBlockHeight
   ) ?? null
