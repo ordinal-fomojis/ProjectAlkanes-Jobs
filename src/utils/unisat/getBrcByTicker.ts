@@ -24,7 +24,7 @@ export const UnisatBrcSchema = z.object({
 export type UnisatBrcToken = z.infer<typeof UnisatBrcSchema>
 
 export async function getBrcByTicker(ticker: string, rateLimitContext?: RateLimitContext) {
-  const token = await unisatFetch(UnisatBrcSchema, `/${UnisatBrcPath[brcType(ticker)]}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
+  const token = await unisatFetch(UnisatBrcSchema, `${UnisatBrcPath[brcType(ticker)]}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
   token.ticker = normaliseTicker(token.ticker)
   return token
 }
