@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
+import { BrcType } from '../../../src/utils/constants.js'
 import { getInteractedBrcTokensInBlock } from '../../../src/utils/unisat/getInteractedBrcTokensInBlock.js'
-import { unisatFetch } from '../../../src/utils/unisat/unisatFetch.js'
+import { UnisatBrcPath, unisatFetch } from '../../../src/utils/unisat/unisatFetch.js'
 
 vi.mock('../../../src/utils/unisat/unisatFetch.js')
 
-describe('getInteractedTokensInBlock', () => {
+describe.for([
+  { type: BrcType.Default },
+  { type: BrcType.SixByte }
+])('getInteractedTokensInBlock - $type', ({ type }) => {
   it('should return unique tickers for a single page response', async () => {
     const mockResponse = {
       total: 4,
@@ -16,32 +20,18 @@ describe('getInteractedTokensInBlock', () => {
       ]
     }
 
-    const sixByteMockResponse = {
-      total: 2,
-      detail: [
-        { ticker: 'potato' },
-        { ticker: 'banana' }
-      ]
-    }
-
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(mockResponse)
-      .mockResolvedValueOnce(sixByteMockResponse)
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(type, 850000)
 
     expect(result).toBeInstanceOf(Set)
-    expect(result).toEqual(new Set(['ORDI', 'SATS', 'PEPE', 'potato', 'banana']))
-    expect(unisatFetch).toHaveBeenCalledTimes(2)
+    expect(result).toEqual(new Set(['ORDI', 'SATS', 'PEPE']))
+    expect(unisatFetch).toHaveBeenCalledOnce()
     expect(unisatFetch).toHaveBeenCalledWith(
-      expect.any(Object), // Schema
-      '/brc20/history-by-height/850000?start=0&limit=500',
-      undefined
-    )
-    expect(unisatFetch).toHaveBeenCalledWith(
-      expect.any(Object), // Schema
-      '/brc20-prog/history-by-height/850000?start=0&limit=500',
-      undefined
+      expect.any(Object),
+      `${UnisatBrcPath[type]}/history-by-height/850000?start=0&limit=500`,
+      expect.any(Object)
     )
   })
 
@@ -59,30 +49,23 @@ describe('getInteractedTokensInBlock', () => {
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(firstPageResponse)
       .mockResolvedValueOnce(secondPageResponse)
-      .mockResolvedValueOnce({ total: 0, detail: [] })
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(type, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(750)
-    expect(unisatFetch).toHaveBeenCalledTimes(3)
+    expect(unisatFetch).toHaveBeenCalledTimes(2)
     
     expect(unisatFetch).toHaveBeenNthCalledWith(1, 
       expect.any(Object),
-      '/brc20/history-by-height/850000?start=0&limit=500',
-      undefined
+      `${UnisatBrcPath[type]}/history-by-height/850000?start=0&limit=500`,
+      expect.any(Object)
     )
     
     expect(unisatFetch).toHaveBeenNthCalledWith(2,
       expect.any(Object),
-      '/brc20/history-by-height/850000?start=500&limit=500',
-      undefined
-    )
-
-    expect(unisatFetch).toHaveBeenNthCalledWith(3,
-      expect.any(Object),
-      '/brc20-prog/history-by-height/850000?start=0&limit=500',
-      undefined
+      `${UnisatBrcPath[type]}/history-by-height/850000?start=500&limit=500`,
+      expect.any(Object)
     )
   })
 
@@ -94,13 +77,12 @@ describe('getInteractedTokensInBlock', () => {
 
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(mockResponse)
-      .mockResolvedValueOnce(mockResponse)
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(type, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(0)
-    expect(unisatFetch).toHaveBeenCalledTimes(2)
+    expect(unisatFetch).toHaveBeenCalledOnce()
   })
 
   it('should deduplicate tickers across pages', async () => {
@@ -123,9 +105,8 @@ describe('getInteractedTokensInBlock', () => {
     vi.mocked(unisatFetch)
       .mockResolvedValueOnce(firstPageResponse)
       .mockResolvedValueOnce(secondPageResponse)
-      .mockResolvedValueOnce({ total: 0, detail: [] })
 
-    const result = await getInteractedBrcTokensInBlock(850000)
+    const result = await getInteractedBrcTokensInBlock(type, 850000)
 
     expect(result).toBeInstanceOf(Set)
     expect(result.size).toBe(3)

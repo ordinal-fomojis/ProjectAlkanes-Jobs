@@ -34,3 +34,10 @@ export const BITCOIN_RPC_URL = BitcoinRpcUrls[BITCOIN_NETWORK]
 
 export const MONGODB_URI = parse(z.string({ message: "MONGODB_URI is missing" }), process.env.MONGODB_URI)
 export const DB_NAME = parse(z.string().default('project-alkanes'), process.env.MONGODB_DB_NAME)
+
+export const BrcType = {
+  Default: 'default',
+  SixByte: '6-byte'
+} as const
+
+export type BrcType = typeof BrcType[keyof typeof BrcType]

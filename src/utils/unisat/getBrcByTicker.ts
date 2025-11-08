@@ -1,7 +1,7 @@
 import z from "zod"
-import { normaliseTicker, tickerLength } from "../brc-ticker.js"
-import { RateLimitContext } from "../rateLimit.js"
-import { unisatFetch } from "./unisatFetch.js"
+import { brcType, normaliseTicker } from "../brc-ticker.js"
+import { createRateLimitContext, RateLimitContext } from "../rateLimit.js"
+import { UnisatBrcPath, unisatFetch, UnisatRateLimitOptions } from "./unisatFetch.js"
 
 export const UnisatBrcSchema = z.object({
   ticker: z.string(),
@@ -24,8 +24,7 @@ export const UnisatBrcSchema = z.object({
 export type UnisatBrcToken = z.infer<typeof UnisatBrcSchema>
 
 export async function getBrcByTicker(ticker: string, rateLimitContext?: RateLimitContext) {
-  const path = tickerLength(ticker) === 6 ? 'brc20-prog' : 'brc20'
-  const token = await unisatFetch(UnisatBrcSchema, `/${path}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
+  const token = await unisatFetch(UnisatBrcSchema, `${UnisatBrcPath[brcType(ticker)]}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
   token.ticker = normaliseTicker(token.ticker)
   return token
 }
@@ -39,6 +38,8 @@ type PromiseResult<T> = {
 }
 
 export async function getBrcsByTicker(tickers: string[], rateLimitContext?: RateLimitContext) {
+  rateLimitContext ??= createRateLimitContext(UnisatRateLimitOptions)
+
   const results: PromiseResult<z.output<typeof UnisatBrcSchema>>[] = []
   for (const ticker of tickers) {
     try {

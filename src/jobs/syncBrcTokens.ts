@@ -1,5 +1,6 @@
 import { BrcToken } from "../database/collections.js"
 import { database } from "../database/database.js"
+import { BrcType } from "../utils/constants.js"
 import { Logger } from "../utils/Logger.js"
 import { mapBrcTokenToDbModel } from "../utils/mapBrcTokenToDbModel.js"
 import { populateBrcTimestamp } from "../utils/populateBrcTimestamp.js"
@@ -36,22 +37,28 @@ const DEFAULT_BRC_TOKEN = {
   tickerLength: 0
 } satisfies Omit<BrcToken, 'ticker' | 'synced'>
 
-export async function syncBrcTokens(log: Logger) {
-  log.info("Starting BRC token sync...")
+export async function syncBrcTokens(log: Logger, type: BrcType) {
+  log.info(`Starting BRC token sync for type: ${type}...`)
   const rateLimitContext = createRateLimitContext(UnisatRateLimitOptions)
 
-  const lastSyncBlockHeight = (await database.syncStatus.findOne())?.brcSyncBlockHeight ?? null
+  const syncStatus = await database.syncStatus.findOne()
+  const lastSyncBlockHeight = (type === BrcType.Default
+    ? syncStatus?.brcSyncBlockHeight
+    : syncStatus?.brcProgSyncBlockHeight
+  ) ?? null
+
   log.info(`Last synced block height: ${lastSyncBlockHeight?.toString() ?? 'none'}`)
-  const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight, rateLimitContext)
+
+  const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight, type, rateLimitContext)
   log.info(`Current block height: ${currentBlockHeight.toString()}`)
 
   if (lastSyncBlockHeight == null) {
-    const tokenCount = await initialSync(log, currentBlockHeight, rateLimitContext)
+    const tokenCount = await initialSync(log, type, currentBlockHeight, rateLimitContext)
     return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
   }
   else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
-      = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight, rateLimitContext)
+      = await syncBlocks(log, type, lastSyncBlockHeight, currentBlockHeight, rateLimitContext)
     const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, rateLimitContext)
     return {
       blocksSynced,
@@ -64,13 +71,13 @@ export async function syncBrcTokens(log: Logger) {
 }
 
 // Fetches tokens interacted with in new blocks. These are marked as unsynced, and the synced block height is updated.
-async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: number, rateLimitContext: RateLimitContext) {
+async function syncBlocks(log: Logger, type: BrcType, lastSyncHeight: number, currentHeight: number, rateLimitContext: RateLimitContext) {
   const tickers = new Set<string>()
   let syncedUpTo = lastSyncHeight
   for (let height = lastSyncHeight + 1; height <= currentHeight; height++) {
     try {
       log.info(`Syncing block height: ${height.toString()}`)
-      const tickersThisBlock = await getInteractedBrcTokensInBlock(height, rateLimitContext)
+      const tickersThisBlock = await getInteractedBrcTokensInBlock(type, height, rateLimitContext)
       log.info(`Found ${tickersThisBlock.size} tokens in block height ${height.toString()}`)
       tickersThisBlock.forEach(ticker => tickers.add(ticker))
       syncedUpTo = height
@@ -90,10 +97,14 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   log.info(`Found ${tickers.size} unique tokens across ${syncedBlocks} synced blocks.`)
   log.info(`Skipped ${unsyncedBlocks} blocks due to errors.`)
 
+  const syncStatusUpdate = type === BrcType.Default
+    ? { brcSyncBlockHeight: syncedUpTo }
+    : { brcProgSyncBlockHeight: syncedUpTo }
+
   await database.withTransaction(async () => {
     await database.syncStatus.updateOne(
       {},
-      { $set: { brcSyncBlockHeight: syncedUpTo } }
+      { $set: syncStatusUpdate }
     )
 
     if (tickers.size === 0) return
@@ -154,15 +165,19 @@ async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitCon
   return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
 }
 
-async function initialSync(log: Logger, blockHeight: number, rateLimitContext: RateLimitContext) {
+async function initialSync(log: Logger, type: BrcType, blockHeight: number, rateLimitContext: RateLimitContext) {
   log.info(`First sync. Performing initial sync.`)
-  const tokens = await populateBrcTimestamp(await getAllBrcTokens(rateLimitContext), [])
+  const tokens = await populateBrcTimestamp(await getAllBrcTokens(type, rateLimitContext), [])
   log.info(`Fetched ${tokens.length} BRC tokens.`)
-  
+
+  const syncStatusUpdate = type === BrcType.Default
+    ? { brcSyncBlockHeight: blockHeight }
+    : { brcProgSyncBlockHeight: blockHeight }
+
   await database.withTransaction(async () => {
     await database.syncStatus.updateOne(
       {},
-      { $set: { brcSyncBlockHeight: blockHeight } },
+      { $set: syncStatusUpdate },
       { upsert: true }
     )
 
@@ -182,7 +197,7 @@ async function initialSync(log: Logger, blockHeight: number, rateLimitContext: R
   return tokens.length
 }
 
-async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null, rateLimitContext: RateLimitContext) {
+async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null, type: BrcType, rateLimitContext: RateLimitContext) {
   const actualBlockHeight = await getBlockHeight()
 
   // If we have synced up to the actual block height, then it's not possible for there to be unsynced blocks,
@@ -191,13 +206,5 @@ async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null, rate
     return actualBlockHeight
   }
 
-  // Similar logic for BRC block height. Assume if we've synced up to it,
-  // then there are also no 6 byte BRC blocks to sync. Might not be true, but it will save unnecessary API calls.
-  const brcBlockHeight = await getBestBrcBlockHeight('default', rateLimitContext)
-  if (lastSyncedBlockHeight != null && lastSyncedBlockHeight >= brcBlockHeight) {
-    return brcBlockHeight
-  }
-
-  const sixByteBrcBlockHeight = await getBestBrcBlockHeight('6-byte', rateLimitContext)
-  return Math.min(brcBlockHeight, sixByteBrcBlockHeight)
+  return await getBestBrcBlockHeight(type, rateLimitContext)
 }
