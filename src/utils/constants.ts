@@ -36,8 +36,8 @@ export const MONGODB_URI = parse(z.string({ message: "MONGODB_URI is missing" })
 export const DB_NAME = parse(z.string().default('project-alkanes'), process.env.MONGODB_DB_NAME)
 
 export const BrcType = {
-  Default: 'default',   // 4-5 byte tickers
-  Prog: 'prog'          // 6 byte tickers
+  Default: 'default',
+  SixByte: '6-byte'
 } as const
 
 export type BrcType = typeof BrcType[keyof typeof BrcType]

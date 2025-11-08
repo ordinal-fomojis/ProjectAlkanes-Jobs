@@ -12,5 +12,5 @@ export function tickerLength(ticker: string) {
 }
 
 export function brcType(ticker: string) {
-  return tickerLength(ticker) === 6 ? BrcType.Prog : BrcType.Default
+  return tickerLength(ticker) === 6 ? BrcType.SixByte : BrcType.Default
 }

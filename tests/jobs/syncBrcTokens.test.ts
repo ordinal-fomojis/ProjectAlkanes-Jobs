@@ -99,11 +99,14 @@ function mockBrcsByTicker(brcTokens: BaseBrcToken[], failedTickers: string[] = [
   })))
 }
 
-describe('syncBrcTokens', () => {
+describe.each([
+  { type: BrcType.Default },
+  { type: BrcType.SixByte }
+])('syncBrcTokens - $type', ({ type }) => {
   it('should do initial sync if no sync status exists', async () => {
     const { currentBrcTokens } = await setup({ syncStatus: null, currentBlockHeight: 900000, dbBrcTokens: [] })
 
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -121,7 +124,11 @@ describe('syncBrcTokens', () => {
     }
 
     const syncStatus = await database.syncStatus.findOne({})
-    expect(syncStatus?.brcSyncBlockHeight).toBe(900000)
+    const syncHeight = type === BrcType.Default ? syncStatus?.brcSyncBlockHeight : syncStatus?.brcProgSyncBlockHeight
+    expect(syncHeight).toBe(900000)
+
+    const otherSyncHeight = type === BrcType.Default ? syncStatus?.brcProgSyncBlockHeight : syncStatus?.brcSyncBlockHeight
+    expect(otherSyncHeight == null).toBe(true)
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
@@ -136,7 +143,7 @@ describe('syncBrcTokens', () => {
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 7).map(x => x.ticker)))
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(3).map(x => x.ticker)))
 
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -147,10 +154,17 @@ describe('syncBrcTokens', () => {
     })
 
     const updatedSyncStatus = await database.syncStatus.findOne({})
-    expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900002)
+    const syncHeight = type === BrcType.Default ? updatedSyncStatus?.brcSyncBlockHeight : updatedSyncStatus?.brcProgSyncBlockHeight
+    expect(syncHeight).toBe(900002)
 
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001, expect.any(Object))
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002, expect.any(Object))
+    const otherSyncHeight = type === BrcType.Default ? updatedSyncStatus?.brcProgSyncBlockHeight : updatedSyncStatus?.brcSyncBlockHeight
+    expect(otherSyncHeight).toBe(900000)
+
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900002, expect.any(Object))
+
+    expect(getBrcsByTicker).toHaveBeenCalledOnce()
     expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens.map(x => x.ticker), expect.any(Object))
 
     for (const token of currentBrcTokens) {
@@ -173,7 +187,7 @@ describe('syncBrcTokens', () => {
       .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 1).map(x => x.ticker)))
       .mockRejectedValueOnce(new Error('Network error'))
 
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -184,11 +198,16 @@ describe('syncBrcTokens', () => {
     })
 
     const updatedSyncStatus = await database.syncStatus.findOne({})
-    expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900001)
+
+    const syncHeight = type === BrcType.Default ? updatedSyncStatus?.brcSyncBlockHeight : updatedSyncStatus?.brcProgSyncBlockHeight
+    expect(syncHeight).toBe(900001)
+
+    const otherSyncHeight = type === BrcType.Default ? updatedSyncStatus?.brcProgSyncBlockHeight : updatedSyncStatus?.brcSyncBlockHeight
+    expect(otherSyncHeight).toBe(900000)
 
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900001, expect.any(Object))
-    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(900002, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900002, expect.any(Object))
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
@@ -199,7 +218,7 @@ describe('syncBrcTokens', () => {
       currentBlockHeight: 900000
     })
 
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -232,7 +251,7 @@ describe('syncBrcTokens', () => {
 
     mockBrcsByTicker(currentBrcTokens, [existingFail.ticker, nonExistingFail.ticker])
     
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -276,7 +295,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -287,7 +306,16 @@ describe('syncBrcTokens', () => {
     })
 
     const updatedSyncStatus = await database.syncStatus.findOne({})
-    expect(updatedSyncStatus?.brcSyncBlockHeight).toBe(900002)
+
+    const syncHeight = type === BrcType.Default ? updatedSyncStatus?.brcSyncBlockHeight : updatedSyncStatus?.brcProgSyncBlockHeight
+    expect(syncHeight).toBe(900002)
+
+    const otherSyncHeight = type === BrcType.Default ? updatedSyncStatus?.brcProgSyncBlockHeight : updatedSyncStatus?.brcSyncBlockHeight
+    expect(otherSyncHeight).toBe(900000)
+
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900001, expect.any(Object))
+    expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900002, expect.any(Object))
 
     await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
@@ -300,7 +328,7 @@ describe('syncBrcTokens', () => {
 
     vi.mocked(getBrcsByTicker).mockResolvedValue([])
 
-    const result = await syncBrcTokens(new MockLogger(), BrcType.Default)
+    const result = await syncBrcTokens(new MockLogger(), type)
 
     expect(result).toEqual({
       blocksSynced: 0,

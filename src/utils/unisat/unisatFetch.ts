@@ -4,7 +4,7 @@ import { createRateLimitContext, RateLimitContext, rateLimitFetch, RateLimitOpti
 
 export const UnisatBrcPath = {
   [BrcType.Default]: '/brc20',
-  [BrcType.Prog]: '/brc20-prog'
+  [BrcType.SixByte]: '/brc20-prog'
 }
 
 export const UnisatRateLimitOptions: RateLimitOptions = {
