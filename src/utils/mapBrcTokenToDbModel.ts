@@ -6,14 +6,15 @@ const ZERO = new bigDecimal(0)
 const HUNDRED = new bigDecimal(100)
 
 export function mapBrcTokenToDbModel(
-  token: UnisatBrcToken & { deployBlocktime: number }, { synced, initialised }: { synced: boolean, initialised: boolean }
+  token: UnisatBrcToken, { synced, initialised }: { synced: boolean, initialised: boolean }
 ) {
   const max = new bigDecimal(token.max)
   const minted = new bigDecimal(token.minted)
   const percentageMinted = max.compareTo(ZERO) === 0 ? HUNDRED : minted.divide(max).multiply(HUNDRED)
+  
   return {
     synced,
-    initialised,
+    initialised: initialised && token.deployBlocktime != null,
     selfMint: token.selfMint,
     holdersCount: token.holdersCount,
     inscriptionNumber: token.inscriptionNumber,
@@ -29,7 +30,7 @@ export function mapBrcTokenToDbModel(
     deployHeight: token.deployHeight,
     mintedOut: minted.compareTo(max) >= 0,
     mintable: !token.selfMint,
-    deployTimestamp: new Date(token.deployBlocktime * 1000),
+    deployTimestamp: token.deployBlocktime == null ? new Date(0) : new Date(token.deployBlocktime * 1000),
     percentageMinted: parseFloat(percentageMinted.getValue()),
     currentMintCount: token.mintTimes,
     tickerLength: Buffer.from(token.ticker, 'utf-8').length

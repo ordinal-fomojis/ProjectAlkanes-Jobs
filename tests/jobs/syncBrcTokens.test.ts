@@ -31,8 +31,7 @@ afterAll(async () => {
   await mongodb.stop()
 })
 
-type BaseBrcToken = UnisatBrcToken & { deployBlocktime: number }
-function randomBrcTokenResponse(ticker?: string): BaseBrcToken {
+function randomBrcTokenResponse(ticker?: string): UnisatBrcToken {
   const max = Random.randomIntLessThan(1000000000)
   const minted = Random.randomIntLessThan(max).toString(10)
   return {
@@ -58,8 +57,8 @@ function randomBrcTokenResponse(ticker?: string): BaseBrcToken {
 interface SetupArgs {
   syncStatus?: SyncStatus | null
   currentBlockHeight?: number
-  dbBrcTokens?: BaseBrcToken[]
-  currentBrcTokens?: BaseBrcToken[]
+  dbBrcTokens?: UnisatBrcToken[]
+  currentBrcTokens?: UnisatBrcToken[]
 }
 
 async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcTokens, currentBrcTokens }: SetupArgs = {}) {
@@ -89,7 +88,7 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcToke
   }
 }
 
-function mockBrcsByTicker(brcTokens: BaseBrcToken[], failedTickers: string[] = []) {
+function mockBrcsByTicker(brcTokens: UnisatBrcToken[], failedTickers: string[] = []) {
   vi.mocked(getBrcsByTicker).mockImplementation(tickers => Promise.resolve(tickers.map(ticker => {
     const token = brcTokens.find(token => token.ticker === ticker)
     if (failedTickers.includes(ticker) || token == null) {
