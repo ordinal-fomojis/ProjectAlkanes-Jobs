@@ -3,7 +3,7 @@ import { getBlockTimestamp } from "./rpc/getBlockTimestamp.js"
 import { throttledPromiseAllSettled } from "./throttledPromise.js"
 import { UnisatBrcToken } from "./unisat/getBrcByTicker.js"
 
-export async function populateBrcTimestamp(fetchedTokens: UnisatBrcToken[], dbTokens: BrcToken[]): Promise<(UnisatBrcToken & { deployBlocktime: number })[]> {
+export async function populateBrcTimestamp(fetchedTokens: UnisatBrcToken[], dbTokens: BrcToken[]): Promise<UnisatBrcToken[]> {
   const tickerMap = new Map(dbTokens.map(token => [token.ticker, token]))
 
   const missingTimestamps = fetchedTokens.filter(token => token.deployBlocktime == null && tickerMap.get(token.ticker)?.initialised !== true)
@@ -22,5 +22,5 @@ export async function populateBrcTimestamp(fetchedTokens: UnisatBrcToken[], dbTo
     }
     const timestamp = timestamps.get(token.deployHeight)
     return { ...token, deployBlocktime: timestamp }
-  }).filter(token => token.deployBlocktime != null) as (UnisatBrcToken & { deployBlocktime: number })[]
+  })
 }
