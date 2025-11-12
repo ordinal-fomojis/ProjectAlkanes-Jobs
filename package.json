@@ -24,9 +24,9 @@
     "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.0",
+    "@types/node": "^24.10.1",
     "@types/seedrandom": "^3.0.8",
-    "@vitest/coverage-istanbul": "^4.0.7",
+    "@vitest/coverage-istanbul": "^4.0.8",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "jiti": "^2.6.1",
@@ -35,7 +35,7 @@
     "seedrandom": "^3.0.5",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3",
+    "typescript-eslint": "^8.46.4",
     "vitest": "^4.0.1",
     "vitest-fetch-mock": "^0.4.5"
   },
