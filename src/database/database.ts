@@ -9,35 +9,39 @@ class Database {
   private collections: CollectionMap = {}
 
   get blockHeight() {
-    return this.collections.block_heights ??= this.getCollection(CollectionName.BlockHeight)
+    return this.getCollection(CollectionName.BlockHeight)
   }
 
   get alkaneToken() {
-    return this.collections.alkane_tokens ??= this.getCollection(CollectionName.AlkaneToken)
+    return this.getCollection(CollectionName.AlkaneToken)
+  }
+
+  get alkaneTokenV2() {
+    return this.getCollection(CollectionName.AlkaneTokenV2)
   }
 
   get mempoolTransaction() {
-    return this.collections.mempool_transactions ??= this.getCollection(CollectionName.MempoolTransaction)
+    return this.getCollection(CollectionName.MempoolTransaction)
   }
 
   get unconfirmedTransaction() {
-    return this.collections.unconfirmed_transactions ??= this.getCollection(CollectionName.UnconfirmedTransaction)
+    return this.getCollection(CollectionName.UnconfirmedTransaction)
   }
 
   get confirmedTransaction() {
-    return this.collections.confirmed_transactions ??= this.getCollection(CollectionName.ConfirmedTransaction)
+    return this.getCollection(CollectionName.ConfirmedTransaction)
   }
 
   get syncStatus() {
-    return this.collections.sync_status ??= this.getCollection(CollectionName.SyncStatus)
+    return this.getCollection(CollectionName.SyncStatus)
   }
 
   get brcToken() {
-    return this.collections.brc_tokens ??= this.getCollection(CollectionName.BrcToken)
+    return this.getCollection(CollectionName.BrcToken)
   }
 
   get mintTransaction() {
-    return this.collections.mint_transactions ??= this.getCollection(CollectionName.MintTransaction)
+    return this.getCollection(CollectionName.MintTransaction)
   }
 
   async connect(uri: string, dbName: string) {
@@ -55,9 +59,12 @@ class Database {
   }
 
   private getCollection<T extends CollectionName>(name: T) {
-    if (this.db == null) {
+    if (this.db == null)
       throw new Error('Database not connected. Call connect() first.');
-    }
+
+    if (this.collections[name] != null)
+      return this.collections[name]
+
     return this.db.collection<DataBaseType[T]>(name)
   }
 
