@@ -1,7 +1,9 @@
 import { database } from "../database/database.js"
 import { Logger } from "../utils/Logger.js"
+import { mapAlkaneTokenToDbModel } from "../utils/mapAlkaneTokenToDbModel.js"
 import { createRateLimitContext, RateLimitContext } from "../utils/rateLimit.js"
 import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
+import { getAllAlkaneTokens } from "../utils/unisat/getAllAlkaneTokens.js"
 import { getBestAlkaneBlockHeight } from "../utils/unisat/getBestAlkaneBlockHeight.js"
 import { UnisatRateLimitOptions } from "../utils/unisat/unisatFetch.js"
 
@@ -16,6 +18,38 @@ export async function syncAlkaneTokensV2(log: Logger) {
   const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight, rateLimitContext)
   log.info(`Current block height: ${currentBlockHeight.toString()}`)
 
+  if (lastSyncBlockHeight == null) {
+    const tokenCount = await initialSync(log, currentBlockHeight, rateLimitContext)
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
+  }
+}
+
+async function initialSync(log: Logger, blockHeight: number, rateLimitContext: RateLimitContext) {
+  log.info(`First sync. Performing initial sync.`)
+  const tokens = await getAllAlkaneTokens(rateLimitContext)
+  log.info(`Fetched ${tokens.length} Alkane tokens.`)
+
+  await database.withTransaction(async () => {
+    await database.syncStatus.updateOne(
+      {},
+      { $set: { alkaneSyncBlockHeight: blockHeight } },
+      { upsert: true }
+    )
+
+    if (tokens.length === 0) return
+
+    await database.alkaneTokenV2.bulkWrite(tokens.map(token => {
+      return {
+        updateOne: {
+          filter: { alkaneId: token.alkaneid },
+          update: { $set: mapAlkaneTokenToDbModel(token, { synced: true, initialised: true }) },
+          upsert: true
+        }
+      }
+    }))
+  })
+
+  return tokens.length
 }
 
 async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null, rateLimitContext: RateLimitContext) {

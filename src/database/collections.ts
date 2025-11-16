@@ -48,12 +48,14 @@ export interface AlkaneTokenV2 {
   deployTxid: string | null
   deployTimestamp: Date | null
   synced: boolean
+  initialised: boolean
   percentageMinted: number | null
   maxSupply: string | null
   mintedOut: boolean
   preminedPercentage: number | null
   hasPremine: boolean
   mintable: boolean
+  holders: number
 }
 
 export interface BrcToken {
