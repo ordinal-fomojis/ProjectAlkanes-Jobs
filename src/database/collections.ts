@@ -33,29 +33,29 @@ export interface AlkaneToken {
 
 export interface AlkaneTokenV2 {
   alkaneId: string
-  name: string | null
-  symbol: string | null
-  logoUrl: string | null
+  name: string
+  symbol: string
+  logoUrl: string
   preminedSupply: string
-  amountPerMint: string | null
-  mintCountCap: string | null // Calculated based on preminedSupply / amountPerMint
+  amountPerMint: string
+  mintCountCap: string // Calculated based on preminedSupply / amountPerMint
   // Numeric approximation for indexing/sorting.
   // Will typically be exact, but for large values we will get numeric rounding,
   // so calculations should use mintCountCap.
-  approximateMintCountCap: number | null
+  approximateMintCountCap: number
   currentSupply: string
   currentMintCount: number
-  deployTxid: string | null
-  deployTimestamp: Date | null
+  deployTxid: string
+  deployTimestamp: Date
   synced: boolean
   initialised: boolean
-  percentageMinted: number | null
-  maxSupply: string | null
+  percentageMinted: number
+  maxSupply: string
   mintedOut: boolean
-  preminedPercentage: number | null
+  preminedPercentage: number
   hasPremine: boolean
   mintable: boolean
-  holders: number
+  holdersCount: number
 }
 
 export interface BrcToken {

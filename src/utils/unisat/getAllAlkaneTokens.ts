@@ -1,6 +1,6 @@
 import z from "zod"
 import { createRateLimitContext, RateLimitContext } from "../rateLimit.js"
-import { UnisatAlkaneSchema } from "./getAlkaneByTicker.js"
+import { UnisatAlkaneSchema } from "./getAlkaneById.js"
 import { unisatFetch, UnisatRateLimitOptions } from "./unisatFetch.js"
 
 const Schema = z.object({

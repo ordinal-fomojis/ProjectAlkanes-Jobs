@@ -1,6 +1,6 @@
 import { bigDecimal } from 'js-big-decimal'
 import { AlkaneTokenV2 } from '../database/collections.js'
-import { UnisatAlkaneToken } from './unisat/getAlkaneByTicker.js'
+import { UnisatAlkaneToken } from './unisat/getAlkaneById.js'
 
 const ZERO = new bigDecimal(0)
 const HUNDRED = new bigDecimal(100)
@@ -44,7 +44,7 @@ export function mapAlkaneTokenToDbModel(
     percentageMinted: parseFloat(percentageMinted.getValue()),
     preminedPercentage: parseFloat(preminedPercentage.getValue()),
     mintable: token.tokenData.mintable,
-    holders: token.tokenData.holders,
+    holdersCount: token.tokenData.holders,
     hasPremine
   } satisfies Omit<AlkaneTokenV2, 'id'>
 }

@@ -24,7 +24,7 @@ export const UnisatAlkaneSchema = z.object({
 })
 export type UnisatAlkaneToken = z.infer<typeof UnisatAlkaneSchema>
 
-export async function getAlkaneByTicker(id: string, rateLimitContext?: RateLimitContext) {
+export async function getAlkaneById(id: string, rateLimitContext?: RateLimitContext) {
   return await unisatFetch(UnisatAlkaneSchema, `/alkanes/${encodeURIComponent(id)}/info`, rateLimitContext)
 }
 
@@ -42,7 +42,7 @@ export async function getAlkanesByIds(ids: string[], rateLimitContext?: RateLimi
   const results: PromiseResult<z.output<typeof UnisatAlkaneSchema>>[] = []
   for (const id of ids) {
     try {
-      results.push({ status: 'fulfilled', value: await getAlkaneByTicker(id, rateLimitContext) })
+      results.push({ status: 'fulfilled', value: await getAlkaneById(id, rateLimitContext) })
     } catch (error) {
       results.push({ status: "rejected", reason: error })
     }
