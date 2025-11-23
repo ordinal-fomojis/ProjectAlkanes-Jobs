@@ -93,9 +93,9 @@ export interface BlockHeight {
 }
 
 export interface SyncStatus {
-  brcSyncBlockHeight: number | null
-  brcProgSyncBlockHeight: number | null
-  alkaneSyncBlockHeight: number | null
+  brcSyncBlockHeight?: number | null
+  brcProgSyncBlockHeight?: number | null
+  alkaneSyncBlockHeight?: number | null
 }
 
 interface EncryptedWif {

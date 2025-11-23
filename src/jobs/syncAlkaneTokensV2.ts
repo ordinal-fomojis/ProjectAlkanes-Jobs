@@ -1,12 +1,10 @@
-import { Block } from "bitcoinjs-lib"
 import { AlkaneTokenV2 } from "../database/collections.js"
 import { database } from "../database/database.js"
-import { decodeAlkaneOpCallsInBlock } from "../utils/decoder.js"
+import { getInteractedAlkaneTokensInBlock } from "../utils/getInteractedAlkaneTokensInBlock.js"
 import { Logger } from "../utils/Logger.js"
 import { mapAlkaneTokenToDbModel } from "../utils/mapAlkaneTokenToDbModel.js"
 import { createRateLimitContext, RateLimitContext } from "../utils/rateLimit.js"
 import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
-import { getRawBlock } from "../utils/rpc/getRawBlocks.js"
 import { getAlkanesByIds } from "../utils/unisat/getAlkaneById.js"
 import { getAllAlkaneTokens } from "../utils/unisat/getAllAlkaneTokens.js"
 import { getBestAlkaneBlockHeight } from "../utils/unisat/getBestAlkaneBlockHeight.js"
@@ -71,9 +69,8 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   for (let height = lastSyncHeight + 1; height <= currentHeight; height++) {
     try {
       log.info(`Syncing block height: ${height.toString()}`)
-      const rawBlock = await getRawBlock(height)
-      const idsInBlock = decodeAlkaneOpCallsInBlock(Block.fromHex(rawBlock)).flatMap(b => b.opcalls).flatMap(o => o.alkaneId)
-      log.info(`Found ${idsInBlock.length} tokens in block height ${height.toString()}`)
+      const idsInBlock = await getInteractedAlkaneTokensInBlock(height)
+      log.info(`Found ${idsInBlock.size} tokens in block height ${height.toString()}`)
       idsInBlock.forEach(id => ids.add(id))
       syncedUpTo = height
     } catch (error) {
@@ -90,7 +87,8 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   
   const unsyncedBlocks = currentHeight - syncedUpTo
   log.info(`Found ${ids.size} unique tokens across ${syncedBlocks} synced blocks.`)
-  log.info(`Skipped ${unsyncedBlocks} blocks due to errors.`)
+  if (unsyncedBlocks > 0)
+    log.info(`Skipped ${unsyncedBlocks} blocks due to errors.`)
 
   await database.withTransaction(async () => {
     await database.syncStatus.updateOne(

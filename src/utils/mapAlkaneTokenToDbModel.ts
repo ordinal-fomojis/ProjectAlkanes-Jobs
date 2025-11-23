@@ -27,7 +27,6 @@ export function mapAlkaneTokenToDbModel(
   return {
     synced,
     initialised,
-    alkaneId: token.alkaneid,
     name: token.tokenData.name,
     symbol: token.tokenData.symbol,
     logoUrl: token.logo,
@@ -46,7 +45,7 @@ export function mapAlkaneTokenToDbModel(
     mintable: token.tokenData.mintable,
     holdersCount: token.tokenData.holders,
     hasPremine
-  } satisfies Omit<AlkaneTokenV2, 'id'>
+  } satisfies Omit<AlkaneTokenV2, 'alkaneId'>
 }
 
 function toAlkaneValue(val: string | number, token: UnisatAlkaneToken) {
