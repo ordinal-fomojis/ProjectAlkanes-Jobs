@@ -38,7 +38,7 @@ export interface AlkaneTokenV2 {
   logoUrl: string
   preminedSupply: string
   amountPerMint: string
-  mintCountCap: string // Calculated based on preminedSupply / amountPerMint
+  mintCountCap: string // Calculated based on preminedSupply, maxSupply and amountPerMint
   // Numeric approximation for indexing/sorting.
   // Will typically be exact, but for large values we will get numeric rounding,
   // so calculations should use mintCountCap.
