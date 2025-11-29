@@ -62,10 +62,7 @@ class Database {
     if (this.db == null)
       throw new Error('Database not connected. Call connect() first.');
 
-    if (this.collections[name] != null)
-      return this.collections[name]
-
-    return this.db.collection<DataBaseType[T]>(name)
+    return this.collections[name] ??= (this.db.collection<DataBaseType[T]>(name) as NonNullable<CollectionMap[T]>)
   }
 
   async withTransaction<T>(
