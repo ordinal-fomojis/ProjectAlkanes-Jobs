@@ -85,17 +85,8 @@ export async function syncMempoolMintsV2(match: Document | null) {
         whenMatched: 'replace',
         whenNotMatched: 'discard'
       }
-    })
-
-
-
-  pipeline.push({
-    $merge: {
-      into: CollectionName.AlkaneTokenV2,
-      whenMatched: 'replace',
-      whenNotMatched: 'discard'
     }
-  })
+  )
 
   await database.alkaneTokenV2.aggregate(pipeline).toArray()
 }
