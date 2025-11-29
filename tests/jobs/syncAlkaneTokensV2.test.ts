@@ -84,7 +84,7 @@ async function setup({ lastSyncedHeight = null, currentBlockHeight = 900000, dbA
 
   if (dbAlkaneTokens.length > 0) {
     await database.alkaneTokenV2.insertMany(dbAlkaneTokens.map(token => ({
-      alkaneId: token.alkaneid,
+      alkaneId: token.alkaneid, pendingMints: 0,
       ...mapAlkaneTokenToDbModel(token, { synced: true, initialised: true })
     })))
   }

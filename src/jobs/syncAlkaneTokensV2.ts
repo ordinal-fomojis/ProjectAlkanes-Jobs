@@ -31,7 +31,8 @@ const DEFAULT_ALKANE_TOKEN = {
   preminedPercentage: 0,
   hasPremine: false,
   mintable: false,
-  holdersCount: 0
+  holdersCount: 0,
+  pendingMints: 0
 } satisfies Omit<AlkaneTokenV2, 'alkaneId' | 'synced'>
 
 export async function syncAlkaneTokensV2(log: Logger) {

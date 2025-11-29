@@ -56,6 +56,7 @@ export interface AlkaneTokenV2 {
   hasPremine: boolean
   mintable: boolean
   holdersCount: number
+  pendingMints: number
 }
 
 export interface BrcToken {
