@@ -55,8 +55,7 @@ export async function syncBrcTokens(log: Logger, type: BrcType) {
   if (lastSyncBlockHeight == null) {
     const tokenCount = await initialSync(log, type, currentBlockHeight, rateLimitContext)
     return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
-  }
-  else {
+  } else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
       = await syncBlocks(log, type, lastSyncBlockHeight, currentBlockHeight, rateLimitContext)
     const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, rateLimitContext)
@@ -67,7 +66,7 @@ export async function syncBrcTokens(log: Logger, type: BrcType) {
       syncedTokens,
       failedToSync
     }
-  }  
+  }
 }
 
 // Fetches tokens interacted with in new blocks. These are marked as unsynced, and the synced block height is updated.
