@@ -52,7 +52,7 @@ export async function syncAlkaneTokensV2(log: Logger) {
   } else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
       = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight)
-    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, rateLimitContext)
+    const { syncedTokens, failedToSync } = await syncUnsyncedAlkaneTokens(log, rateLimitContext)
     return {
       blocksSynced,
       blocksSkippedOrFailed,
@@ -114,7 +114,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: ids.size }
 }
 
-async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitContext) {
+async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimitContext) {
   const unsyncedTokens = await database.alkaneTokenV2.find({ synced: false })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
 
@@ -122,7 +122,7 @@ async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitCon
     log.info(`No unsynced Alkane tokens tokens found`)
     return { syncedTokens: 0, failedToSync: 0 }
   }
-  log.info(`Syncing ${unsyncedTokens.length} unsynced BRC tokens`)
+  log.info(`Syncing ${unsyncedTokens.length} unsynced Alkane tokens`)
 
   const tokens = await getAlkanesByIds(unsyncedTokens.map(t => t.alkaneId), rateLimitContext)
   const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
