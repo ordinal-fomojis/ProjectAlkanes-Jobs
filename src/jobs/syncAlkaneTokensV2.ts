@@ -119,7 +119,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
     .limit(MAX_TOKENS_PER_SYNC).toArray()
 
   if (unsyncedTokens.length === 0) {
-    log.info(`No unsynced Alkane tokens tokens found`)
+    log.info(`No unsynced Alkane tokens found`)
     return { syncedTokens: 0, failedToSync: 0 }
   }
   log.info(`Syncing ${unsyncedTokens.length} unsynced Alkane tokens`)
