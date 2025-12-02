@@ -15,7 +15,7 @@
     "plop": "cross-env NODE_OPTIONS='--import tsx' plop --plopfile=plopfile.ts"
   },
   "dependencies": {
-    "@azure/functions": "^4.9.0",
+    "@azure/functions": "^4.10.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "bitcoinjs-lib": "^7.0.0",
     "js-big-decimal": "^2.2.0",
@@ -26,14 +26,14 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/seedrandom": "^3.0.8",
-    "@vitest/coverage-istanbul": "^4.0.13",
+    "@vitest/coverage-istanbul": "^4.0.14",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "jiti": "^2.6.1",
     "mongodb-memory-server": "^10.3.0",
     "plop": "^4.0.4",
     "seedrandom": "^3.0.5",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.0",
     "vitest": "^4.0.1",
