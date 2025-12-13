@@ -5,6 +5,7 @@ export default defineConfig({
     environment: 'node',
     silent: 'passed-only',
     setupFiles: ['./tests/setup.ts'],
+    include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'istanbul'
     },

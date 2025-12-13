@@ -45,6 +45,7 @@ function randomAlkaneTokenResponse(id?: string): UnisatAlkaneToken {
     txid: Random.randomTransactionId(),
     timestamp: new Date().getTime(),
     logo: `https://example.com/logo/${Random.randomIntLessThan(1000)}.png`,
+    type: "token",
     tokenData: {
       name: `AlkaneToken${Random.randomIntLessThan(1000)}`,
       symbol: `ATK${Random.randomIntLessThan(1000)}`,
@@ -114,8 +115,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 0,
       blocksSkippedOrFailed: 0,
-      tokensUnsynced: 0,
-      syncedTokens: 10,
+      alkanesUnsynced: 0,
+      syncedAlkanes: 10,
       failedToSync: 0
     })
 
@@ -145,8 +146,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 2,
       blocksSkippedOrFailed: 0,
-      tokensUnsynced: 10,
-      syncedTokens: 10,
+      alkanesUnsynced: 10,
+      syncedAlkanes: 10,
       failedToSync: 0
     })
 
@@ -183,8 +184,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 1,
       blocksSkippedOrFailed: 2,
-      tokensUnsynced: 1,
-      syncedTokens: 1,
+      alkanesUnsynced: 1,
+      syncedAlkanes: 1,
       failedToSync: 0
     })
 
@@ -207,8 +208,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 0,
       blocksSkippedOrFailed: 0,
-      tokensUnsynced: 0,
-      syncedTokens: 0,
+      alkanesUnsynced: 0,
+      syncedAlkanes: 0,
       failedToSync: 0
     })
 
@@ -238,8 +239,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 1,
       blocksSkippedOrFailed: 0,
-      tokensUnsynced: 4,
-      syncedTokens: 2,
+      alkanesUnsynced: 4,
+      syncedAlkanes: 2,
       failedToSync: 2
     })
 
@@ -280,8 +281,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 2,
       blocksSkippedOrFailed: 0,
-      tokensUnsynced: 0,
-      syncedTokens: 0,
+      alkanesUnsynced: 0,
+      syncedAlkanes: 0,
       failedToSync: 0
     })
 
@@ -306,8 +307,8 @@ describe('syncAlkaneTokens', () => {
     expect(result).toEqual({
       blocksSynced: 0,
       blocksSkippedOrFailed: 0,
-      tokensUnsynced: 0,
-      syncedTokens: 0,
+      alkanesUnsynced: 0,
+      syncedAlkanes: 0,
       failedToSync: 0
     })
 

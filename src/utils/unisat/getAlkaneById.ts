@@ -2,11 +2,19 @@ import z from "zod"
 import { createRateLimitContext, RateLimitContext } from "../rateLimit.js"
 import { unisatFetch, UnisatRateLimitOptions } from "./unisatFetch.js"
 
-export const UnisatAlkaneSchema = z.object({
+const BaseUnisatAlkaneSchema = z.object({
   alkaneid: z.string(),
   height: z.number(),
   txid: z.string(),
   timestamp: z.number(),
+})
+
+const UnisatAlkaneContractSchema = BaseUnisatAlkaneSchema.extend({
+  type: z.literal("contract")
+})
+
+const UnisatAlkaneTokenSchema = BaseUnisatAlkaneSchema.extend({
+  type: z.literal("token"),
   logo: z.string(),
   tokenData: z.object({
     name: z.string(),
@@ -22,7 +30,10 @@ export const UnisatAlkaneSchema = z.object({
     holders: z.number()
   })
 })
-export type UnisatAlkaneToken = z.infer<typeof UnisatAlkaneSchema>
+export type UnisatAlkaneToken = z.infer<typeof UnisatAlkaneTokenSchema>
+
+export const UnisatAlkaneSchema = z.union([UnisatAlkaneContractSchema, UnisatAlkaneTokenSchema])
+export type UnisatAlkane = z.infer<typeof UnisatAlkaneSchema>
 
 export async function getAlkaneById(id: string, rateLimitContext?: RateLimitContext) {
   return await unisatFetch(UnisatAlkaneSchema, `/alkanes/${encodeURIComponent(id)}/info`, rateLimitContext)

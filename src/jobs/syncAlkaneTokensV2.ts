@@ -48,16 +48,16 @@ export async function syncAlkaneTokensV2(log: Logger) {
 
   if (lastSyncBlockHeight == null) {
     const tokenCount = await initialSync(log, currentBlockHeight, rateLimitContext)
-    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, alkanesUnsynced: 0, syncedAlkanes: tokenCount, failedToSync: 0 }
   } else {
-    const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
+    const { blocksSynced, blocksSkippedOrFailed, alkanesUnsynced }
       = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight)
-    const { syncedTokens, failedToSync } = await syncUnsyncedAlkaneTokens(log, rateLimitContext)
+    const { syncedAlkanes, failedToSync } = await syncUnsyncedAlkaneTokens(log, rateLimitContext)
     return {
       blocksSynced,
       blocksSkippedOrFailed,
-      tokensUnsynced,
-      syncedTokens,
+      alkanesUnsynced,
+      syncedAlkanes,
       failedToSync
     }
   }
@@ -83,7 +83,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   const syncedBlocks = syncedUpTo - lastSyncHeight
   if (syncedBlocks === 0 && ids.size === 0) {
     log.info(`Did not sync any blocks or tokens.`)
-    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0 }
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, alkanesUnsynced: 0 }
   }
   
   const unsyncedBlocks = currentHeight - syncedUpTo
@@ -111,7 +111,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
     })))
   })
 
-  return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: ids.size }
+  return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, alkanesUnsynced: ids.size }
 }
 
 async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimitContext) {
@@ -120,36 +120,47 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
 
   if (unsyncedTokens.length === 0) {
     log.info(`No unsynced Alkane tokens found`)
-    return { syncedTokens: 0, failedToSync: 0 }
+    return { syncedAlkanes: 0, failedToSync: 0 }
   }
   log.info(`Syncing ${unsyncedTokens.length} unsynced Alkane tokens`)
 
-  const tokens = await getAlkanesByIds(unsyncedTokens.map(t => t.alkaneId), rateLimitContext)
-  const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
-  const failedTokens = tokens.filter(r => r.status === 'rejected').map(r => r.reason)
+  const alkanes = await getAlkanesByIds(unsyncedTokens.map(t => t.alkaneId), rateLimitContext)
 
-  if (failedTokens.length > 0) {
-    log.warn(`Failed to fetch ${failedTokens.length} tokens`)
-    for (const error of failedTokens) {
+  const successfulAlkanes = alkanes.filter(r => r.status === 'fulfilled').map(r => r.value)
+  const failedAlkanes = alkanes.filter(r => r.status === 'rejected').map(r => r.reason)
+
+  const contracts = successfulAlkanes.filter(a => a.type === "contract")
+  const tokens = successfulAlkanes.filter(a => a.type === "token")
+
+  if (failedAlkanes.length > 0) {
+    log.warn(`Failed to fetch ${failedAlkanes.length} tokens`)
+    for (const error of failedAlkanes) {
       log.warn(`Failed to fetch token with error: `, error)
     }
   }
 
-  log.info(`Successfully fetched ${successfulTokens.length} tokens`)
+  log.info(`Successfully fetched ${tokens.length} tokens and ${contracts.length} contracts`)
 
-  if (successfulTokens.length === 0) 
-    return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
+  if (successfulAlkanes.length === 0) 
+    return { syncedAlkanes: 0, failedToSync: unsyncedTokens.length }
 
-  await database.alkaneTokenV2.bulkWrite(successfulTokens.map(token => {
-    return {
+  await database.alkaneTokenV2.bulkWrite([
+    ...tokens.map(token => ({
       updateOne: {
         filter: { alkaneId: token.alkaneid },
         update: { $set: mapAlkaneTokenToDbModel(token, { synced: true, initialised: true }) }
       }
-    }
-  }))
+    })),
+    ...(contracts.length === 0 ? [] : [
+      {
+        deleteMany: {
+          filter: { alkaneId: { $in: contracts.map(c => c.alkaneid) } }
+        }
+      }
+    ])
+  ])
 
-  return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
+  return { syncedAlkanes: successfulAlkanes.length, failedToSync: alkanes.length - successfulAlkanes.length }
 }
 
 async function initialSync(log: Logger, blockHeight: number, rateLimitContext: RateLimitContext) {

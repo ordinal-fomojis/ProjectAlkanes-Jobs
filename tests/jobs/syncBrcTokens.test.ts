@@ -1,9 +1,10 @@
 import { WithId } from "mongodb"
 import { MongoMemoryServer } from "mongodb-memory-server"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { BrcToken, SyncStatus } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
 import { syncBrcTokens } from "../../src/jobs/syncBrcTokens.js"
+import { brcType } from "../../src/utils/brc-ticker.js"
 import { BrcType, DB_NAME } from "../../src/utils/constants.js"
 import { mapBrcTokenToDbModel } from "../../src/utils/mapBrcTokenToDbModel.js"
 import { getBlockHeight } from "../../src/utils/rpc/getBlockHeight.js"
@@ -26,16 +27,24 @@ beforeAll(async () => {
   await database.connect(mongodb.getUri(), DB_NAME)
 })
 
+afterEach(async () => {
+  await database.brcToken.deleteMany({})
+  await database.syncStatus.deleteMany({})
+})
+
 afterAll(async () => {
   await database.disconnect()
   await mongodb.stop()
 })
 
-function randomBrcTokenResponse(ticker?: string): UnisatBrcToken {
+function randomBrcTokenResponse(options: { type: BrcType } | { ticker: string }): UnisatBrcToken {
   const max = Random.randomIntLessThan(1000000000)
   const minted = Random.randomIntLessThan(max).toString(10)
+  const ticker = 'ticker' in options
+    ? options.ticker
+    : Random.randomString({ length: options.type == BrcType.Default ? 4 : 6, charset: 'alpha' })
   return {
-    ticker: ticker ?? Random.randomString({ length: 4, charset: 'alpha' }),
+    ticker,
     selfMint: Random.randomBoolean(),
     holdersCount: Random.randomIntLessThan(1000),
     inscriptionNumber: Random.randomIntLessThan(10000000),
@@ -62,7 +71,6 @@ interface SetupArgs {
 }
 
 async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcTokens, currentBrcTokens }: SetupArgs = {}) {
-  await database.syncStatus.deleteMany()
   if (syncStatus != null) {
     await database.syncStatus.insertOne(syncStatus)
   }
@@ -70,9 +78,12 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcToke
   vi.mocked(getBlockHeight).mockResolvedValue(currentBlockHeight)
   vi.mocked(getBestBrcBlockHeight).mockResolvedValue(currentBlockHeight)
 
-  currentBrcTokens ??= Array.from({ length: 10 }, () => randomBrcTokenResponse())
-  dbBrcTokens ??= currentBrcTokens.slice(0, 5).map(token => randomBrcTokenResponse(token.ticker))
-  vi.mocked(getAllBrcTokens).mockResolvedValue(currentBrcTokens)
+  currentBrcTokens ??= Array.from({ length: 10 }, () => randomBrcTokenResponse({ type: BrcType.Default })).concat(
+    Array.from({ length: 10 }, () => randomBrcTokenResponse({ type: BrcType.SixByte }))
+  )
+  dbBrcTokens ??= currentBrcTokens.slice(0, 5).concat(currentBrcTokens.slice(10, 15))
+    .map(token => randomBrcTokenResponse({ ticker: token.ticker }))
+  vi.mocked(getAllBrcTokens).mockImplementation(type => Promise.resolve(currentBrcTokens.filter(token => brcType(token.ticker) === type)))
   mockBrcsByTicker(currentBrcTokens)
 
   if (dbBrcTokens.length > 0) {
@@ -83,8 +94,14 @@ async function setup({ syncStatus = null, currentBlockHeight = 900000, dbBrcToke
   }
 
   return {
-    currentBrcTokens,
-    dbBrcTokens
+    currentBrcTokens: {
+      [BrcType.Default]: currentBrcTokens.filter(t => brcType(t.ticker) === BrcType.Default),
+      [BrcType.SixByte]: currentBrcTokens.filter(t => brcType(t.ticker) === BrcType.SixByte)
+    },
+    dbBrcTokens: {
+      [BrcType.Default]: dbBrcTokens.filter(t => brcType(t.ticker) === BrcType.Default),
+      [BrcType.SixByte]: dbBrcTokens.filter(t => brcType(t.ticker) === BrcType.SixByte)
+    }
   }
 }
 
@@ -115,7 +132,7 @@ describe.each([
       failedToSync: 0
     })
 
-    for (const token of currentBrcTokens) {
+    for (const token of currentBrcTokens[type]) {
       const dbToken = await database.brcToken.findOne({ ticker: token.ticker })
       compareDbTokenData(dbToken, token)
       expect(dbToken?.initialised).toBe(true)
@@ -128,8 +145,6 @@ describe.each([
 
     const otherSyncHeight = type === BrcType.Default ? syncStatus?.brcProgSyncBlockHeight : syncStatus?.brcSyncBlockHeight
     expect(otherSyncHeight == null).toBe(true)
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should update existing tokens, and add new ones when syncing', async () => {
@@ -139,8 +154,8 @@ describe.each([
     })
     
     vi.mocked(getInteractedBrcTokensInBlock)
-      .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 7).map(x => x.ticker)))
-      .mockResolvedValueOnce(new Set(currentBrcTokens.slice(3).map(x => x.ticker)))
+      .mockResolvedValueOnce(new Set(currentBrcTokens[type].slice(0, 7).map(x => x.ticker)))
+      .mockResolvedValueOnce(new Set(currentBrcTokens[type].slice(3).map(x => x.ticker)))
 
     const result = await syncBrcTokens(new MockLogger(), type)
 
@@ -164,16 +179,14 @@ describe.each([
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900002, expect.any(Object))
 
     expect(getBrcsByTicker).toHaveBeenCalledOnce()
-    expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens.map(x => x.ticker), expect.any(Object))
+    expect(getBrcsByTicker).toHaveBeenCalledWith(currentBrcTokens[type].map(x => x.ticker), expect.any(Object))
 
-    for (const token of currentBrcTokens) {
+    for (const token of currentBrcTokens[type]) {
       const dbToken = await database.brcToken.findOne({ ticker: token.ticker })
       compareDbTokenData(dbToken, token)
       expect(dbToken?.initialised).toBe(true)
       expect(dbToken?.synced).toBe(true)
     }
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should handle block sync errors gracefully', async () => {
@@ -183,7 +196,7 @@ describe.each([
     })
 
     vi.mocked(getInteractedBrcTokensInBlock)
-      .mockResolvedValueOnce(new Set(currentBrcTokens.slice(0, 1).map(x => x.ticker)))
+      .mockResolvedValueOnce(new Set(currentBrcTokens[type].slice(0, 1).map(x => x.ticker)))
       .mockRejectedValueOnce(new Error('Network error'))
 
     const result = await syncBrcTokens(new MockLogger(), type)
@@ -207,12 +220,10 @@ describe.each([
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900001, expect.any(Object))
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900002, expect.any(Object))
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should handle no new blocks to sync', async () => {
-    const { currentBrcTokens } = await setup({
+    await setup({
       syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
       currentBlockHeight: 900000
     })
@@ -228,8 +239,6 @@ describe.each([
     })
 
     expect(getInteractedBrcTokensInBlock).not.toHaveBeenCalled()
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should sync unsynced tokens with mixed success and failure', async () => {
@@ -238,8 +247,8 @@ describe.each([
       currentBlockHeight: 900001
     })
 
-    const nonExistingTokens = currentBrcTokens.filter(token => !dbBrcTokens.some(dbToken => dbToken.ticker === token.ticker))
-    const existingTokens = currentBrcTokens.filter(token => dbBrcTokens.some(dbToken => dbToken.ticker === token.ticker))
+    const nonExistingTokens = currentBrcTokens[type].filter(token => !dbBrcTokens[type].some(dbToken => dbToken.ticker === token.ticker))
+    const existingTokens = currentBrcTokens[type].filter(token => dbBrcTokens[type].some(dbToken => dbToken.ticker === token.ticker))
     const existingFail = Random.randomChoice(existingTokens)
     const existingSuccess = Random.randomChoice(existingTokens.filter(token => token.ticker !== existingFail.ticker))
     const nonExistingFail = Random.randomChoice(nonExistingTokens)
@@ -248,7 +257,7 @@ describe.each([
     vi.mocked(getInteractedBrcTokensInBlock)
       .mockResolvedValue(new Set([existingFail.ticker, nonExistingSuccess.ticker, existingSuccess.ticker, nonExistingFail.ticker]))
 
-    mockBrcsByTicker(currentBrcTokens, [existingFail.ticker, nonExistingFail.ticker])
+    mockBrcsByTicker(currentBrcTokens[type], [existingFail.ticker, nonExistingFail.ticker])
     
     const result = await syncBrcTokens(new MockLogger(), type)
 
@@ -277,12 +286,10 @@ describe.each([
     expect(nonExistingSuccessFromDb?.synced).toBe(true)
     expect(nonExistingSuccessFromDb?.initialised).toBe(true)
     compareDbTokenData(nonExistingSuccessFromDb, nonExistingSuccess)
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should handle empty blocks with no token interactions', async () => {
-    const { currentBrcTokens } = await setup({
+    await setup({
       syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
       currentBlockHeight: 900002
     })
@@ -315,12 +322,10 @@ describe.each([
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledTimes(2)
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900001, expect.any(Object))
     expect(getInteractedBrcTokensInBlock).toHaveBeenCalledWith(type, 900002, expect.any(Object))
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 
   it('should handle no unsynced tokens', async () => {
-    const { currentBrcTokens } = await setup({
+    await setup({
       syncStatus: { brcSyncBlockHeight: 900000, brcProgSyncBlockHeight: 900000 },
       currentBlockHeight: 900000
     })
@@ -338,8 +343,6 @@ describe.each([
     })
 
     expect(getBrcsByTicker).not.toHaveBeenCalled()
-
-    await database.brcToken.deleteMany({ ticker: { $in: currentBrcTokens.map(t => t.ticker) } })
   })
 })
 

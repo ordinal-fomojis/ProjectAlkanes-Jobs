@@ -1,5 +1,6 @@
 import { BrcToken } from "../database/collections.js"
 import { database } from "../database/database.js"
+import { tickerLength } from "../utils/brc-ticker.js"
 import { BrcType } from "../utils/constants.js"
 import { Logger } from "../utils/Logger.js"
 import { mapBrcTokenToDbModel } from "../utils/mapBrcTokenToDbModel.js"
@@ -14,28 +15,30 @@ import { UnisatRateLimitOptions } from "../utils/unisat/unisatFetch.js"
 
 const MAX_TOKENS_PER_SYNC = 50
 
-const DEFAULT_BRC_TOKEN = {
-  initialised: false,
-  selfMint: false,
-  holdersCount: 0,
-  inscriptionNumber: 0,
-  inscriptionId: "",
-  max: "0",
-  limit: "0",
-  minted: "0",
-  totalMinted: "0",
-  confirmedMinted: "0",
-  confirmedMinted1h: "0",
-  confirmedMinted24h: "0",
-  decimal: 0,
-  deployHeight: 0,
-  mintable: false,
-  mintedOut: false,
-  percentageMinted: 0,
-  currentMintCount: 0,
-  deployTimestamp: new Date(0),
-  tickerLength: 0
-} satisfies Omit<BrcToken, 'ticker' | 'synced'>
+function defaultBrcToken(ticker: string): Omit<BrcToken, 'ticker' | 'synced'> {
+  return {
+    initialised: false,
+    selfMint: false,
+    holdersCount: 0,
+    inscriptionNumber: 0,
+    inscriptionId: "",
+    max: "0",
+    limit: "0",
+    minted: "0",
+    totalMinted: "0",
+    confirmedMinted: "0",
+    confirmedMinted1h: "0",
+    confirmedMinted24h: "0",
+    decimal: 0,
+    deployHeight: 0,
+    mintable: false,
+    mintedOut: false,
+    percentageMinted: 0,
+    currentMintCount: 0,
+    deployTimestamp: new Date(0),
+    tickerLength: tickerLength(ticker)
+  }
+}
 
 export async function syncBrcTokens(log: Logger, type: BrcType) {
   log.info(`Starting BRC token sync for type: ${type}...`)
@@ -58,7 +61,7 @@ export async function syncBrcTokens(log: Logger, type: BrcType) {
   } else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
       = await syncBlocks(log, type, lastSyncBlockHeight, currentBlockHeight, rateLimitContext)
-    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, rateLimitContext)
+    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, type, rateLimitContext)
     return {
       blocksSynced,
       blocksSkippedOrFailed,
@@ -113,7 +116,7 @@ async function syncBlocks(log: Logger, type: BrcType, lastSyncHeight: number, cu
         filter: { ticker },
         update: {
           $set: { synced: false },
-          $setOnInsert: DEFAULT_BRC_TOKEN satisfies Omit<BrcToken, 'ticker' | 'synced'>
+          $setOnInsert: defaultBrcToken(ticker)
         },
         upsert: true
       }
@@ -123,8 +126,9 @@ async function syncBlocks(log: Logger, type: BrcType, lastSyncHeight: number, cu
   return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: tickers.size }
 }
 
-async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitContext) {
-  const unsyncedTokens = await database.brcToken.find({ synced: false })
+async function syncUnsyncedBrcTokens(log: Logger, type: BrcType, rateLimitContext: RateLimitContext) {
+  const tickerLengthFilter = type === BrcType.SixByte ? { tickerLength: 6 } : { tickerLength: { $ne: 6 } }
+  const unsyncedTokens = await database.brcToken.find({ synced: false, ...tickerLengthFilter })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
 
   if (unsyncedTokens.length === 0) {
