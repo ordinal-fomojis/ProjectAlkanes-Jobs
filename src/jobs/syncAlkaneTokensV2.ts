@@ -129,7 +129,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
   const successfulAlkanes = alkanes.filter(r => r.status === 'fulfilled').map(r => r.value)
   const failedAlkanes = alkanes.filter(r => r.status === 'rejected').map(r => r.reason)
 
-  const contracts = successfulAlkanes.filter(a => a.type === "contract")
+  const nonTokens = successfulAlkanes.filter(a => a.type !== "token")
   const tokens = successfulAlkanes.filter(a => a.type === "token")
 
   if (failedAlkanes.length > 0) {
@@ -139,7 +139,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
     }
   }
 
-  log.info(`Successfully fetched ${tokens.length} tokens and ${contracts.length} contracts`)
+  log.info(`Successfully fetched ${tokens.length} tokens and ${nonTokens.length} contracts`)
 
   if (successfulAlkanes.length === 0) 
     return { syncedAlkanes: 0, failedToSync: unsyncedTokens.length }
@@ -151,10 +151,10 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
         update: { $set: mapAlkaneTokenToDbModel(token, { synced: true, initialised: true }) }
       }
     })),
-    ...(contracts.length === 0 ? [] : [
+    ...(nonTokens.length === 0 ? [] : [
       {
         deleteMany: {
-          filter: { alkaneId: { $in: contracts.map(c => c.alkaneid) } }
+          filter: { alkaneId: { $in: nonTokens.map(c => c.alkaneid) } }
         }
       }
     ])
