@@ -45,6 +45,7 @@ function randomAlkaneTokenResponse(id?: string): UnisatAlkaneToken {
     txid: Random.randomTransactionId(),
     timestamp: new Date().getTime(),
     logo: `https://example.com/logo/${Random.randomIntLessThan(1000)}.png`,
+    type: "token",
     tokenData: {
       name: `AlkaneToken${Random.randomIntLessThan(1000)}`,
       symbol: `ATK${Random.randomIntLessThan(1000)}`,

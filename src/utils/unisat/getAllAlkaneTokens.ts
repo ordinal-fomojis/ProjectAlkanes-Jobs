@@ -22,7 +22,9 @@ export async function getAllAlkaneTokens(rateLimitContext?: RateLimitContext) {
     tokens.push(...nextDetail)
     page++
   }
-  return tokens
+
+  // Filtering must be done at the end, as we need the total count of tokens for pagination
+  return tokens.filter(token => token.type === "token")
 }
 
 async function getPagedAlkaneTokens(page: number, rateLimitContext: RateLimitContext) {
