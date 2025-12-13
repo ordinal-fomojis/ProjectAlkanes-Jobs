@@ -139,7 +139,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
     }
   }
 
-  log.info(`Successfully fetched ${tokens.length} tokens and ${nonTokens.length} contracts`)
+  log.info(`Successfully fetched ${tokens.length} tokens and ${nonTokens.length} non-tokens`)
 
   if (successfulAlkanes.length === 0) 
     return { syncedAlkanes: 0, failedToSync: unsyncedTokens.length }
