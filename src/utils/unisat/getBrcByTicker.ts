@@ -1,5 +1,5 @@
 import z from "zod"
-import { brcType, normaliseTicker } from "../brc-ticker.js"
+import { brcType, normaliseTicker, tickerToPathQuery } from "../brc-ticker.js"
 import { createRateLimitContext, RateLimitContext } from "../rateLimit.js"
 import { UnisatBrcPath, unisatFetch, UnisatRateLimitOptions } from "./unisatFetch.js"
 
@@ -24,7 +24,8 @@ export const UnisatBrcSchema = z.object({
 export type UnisatBrcToken = z.infer<typeof UnisatBrcSchema>
 
 export async function getBrcByTicker(ticker: string, rateLimitContext?: RateLimitContext) {
-  const token = await unisatFetch(UnisatBrcSchema, `${UnisatBrcPath[brcType(ticker)]}/${encodeURIComponent(normaliseTicker(ticker))}/info`, rateLimitContext)
+  const tickerQuery = tickerToPathQuery(ticker)
+  const token = await unisatFetch(UnisatBrcSchema, `${UnisatBrcPath[brcType(ticker)]}/${tickerQuery}/info`, rateLimitContext)
   token.ticker = normaliseTicker(token.ticker)
   return token
 }
