@@ -48,16 +48,16 @@ export async function syncAlkaneTokensV2(log: Logger) {
 
   if (lastSyncBlockHeight == null) {
     const tokenCount = await initialSync(log, currentBlockHeight, rateLimitContext)
-    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0, syncedTokens: tokenCount, failedToSync: 0 }
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, alkanesUnsynced: 0, syncedAlkanes: tokenCount, failedToSync: 0 }
   } else {
-    const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
+    const { blocksSynced, blocksSkippedOrFailed, alkanesUnsynced }
       = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight)
-    const { syncedTokens, failedToSync } = await syncUnsyncedAlkaneTokens(log, rateLimitContext)
+    const { syncedAlkanes, failedToSync } = await syncUnsyncedAlkaneTokens(log, rateLimitContext)
     return {
       blocksSynced,
       blocksSkippedOrFailed,
-      tokensUnsynced,
-      syncedTokens,
+      alkanesUnsynced,
+      syncedAlkanes,
       failedToSync
     }
   }
@@ -83,7 +83,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
   const syncedBlocks = syncedUpTo - lastSyncHeight
   if (syncedBlocks === 0 && ids.size === 0) {
     log.info(`Did not sync any blocks or tokens.`)
-    return { blocksSynced: 0, blocksSkippedOrFailed: 0, tokensUnsynced: 0 }
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, alkanesUnsynced: 0 }
   }
   
   const unsyncedBlocks = currentHeight - syncedUpTo
@@ -111,7 +111,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
     })))
   })
 
-  return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: ids.size }
+  return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, alkanesUnsynced: ids.size }
 }
 
 async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimitContext) {
@@ -120,7 +120,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
 
   if (unsyncedTokens.length === 0) {
     log.info(`No unsynced Alkane tokens found`)
-    return { syncedTokens: 0, failedToSync: 0 }
+    return { syncedAlkanes: 0, failedToSync: 0 }
   }
   log.info(`Syncing ${unsyncedTokens.length} unsynced Alkane tokens`)
 
@@ -142,7 +142,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
   log.info(`Successfully fetched ${tokens.length} tokens and ${contracts.length} contracts`)
 
   if (successfulAlkanes.length === 0) 
-    return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
+    return { syncedAlkanes: 0, failedToSync: unsyncedTokens.length }
 
   await database.alkaneTokenV2.bulkWrite([
     ...tokens.map(token => ({
@@ -151,14 +151,16 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
         update: { $set: mapAlkaneTokenToDbModel(token, { synced: true, initialised: true }) }
       }
     })),
-    {
-      deleteMany: {
-        filter: { alkaneId: { $in: contracts.map(c => c.alkaneid) } }
+    ...(contracts.length === 0 ? [] : [
+      {
+        deleteMany: {
+          filter: { alkaneId: { $in: contracts.map(c => c.alkaneid) } }
+        }
       }
-    }
+    ])
   ])
 
-  return { syncedTokens: successfulAlkanes.length, failedToSync: alkanes.length - successfulAlkanes.length }
+  return { syncedAlkanes: successfulAlkanes.length, failedToSync: alkanes.length - successfulAlkanes.length }
 }
 
 async function initialSync(log: Logger, blockHeight: number, rateLimitContext: RateLimitContext) {
