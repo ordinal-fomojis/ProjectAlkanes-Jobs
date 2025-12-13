@@ -9,8 +9,8 @@ const BaseUnisatAlkaneSchema = z.object({
   timestamp: z.number(),
 })
 
-const UnisatAlkaneContractSchema = BaseUnisatAlkaneSchema.extend({
-  type: z.literal("contract")
+const UnisatAlkaneNonTokenSchema = BaseUnisatAlkaneSchema.extend({
+  type: z.enum(["contract", "collection", "nft"])
 })
 
 const UnisatAlkaneTokenSchema = BaseUnisatAlkaneSchema.extend({
@@ -32,7 +32,7 @@ const UnisatAlkaneTokenSchema = BaseUnisatAlkaneSchema.extend({
 })
 export type UnisatAlkaneToken = z.infer<typeof UnisatAlkaneTokenSchema>
 
-export const UnisatAlkaneSchema = z.union([UnisatAlkaneContractSchema, UnisatAlkaneTokenSchema])
+export const UnisatAlkaneSchema = z.union([UnisatAlkaneNonTokenSchema, UnisatAlkaneTokenSchema])
 export type UnisatAlkane = z.infer<typeof UnisatAlkaneSchema>
 
 export async function getAlkaneById(id: string, rateLimitContext?: RateLimitContext) {
