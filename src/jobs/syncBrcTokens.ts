@@ -58,7 +58,7 @@ export async function syncBrcTokens(log: Logger, type: BrcType) {
   } else {
     const { blocksSynced, blocksSkippedOrFailed, tokensUnsynced }
       = await syncBlocks(log, type, lastSyncBlockHeight, currentBlockHeight, rateLimitContext)
-    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, rateLimitContext)
+    const { syncedTokens, failedToSync } = await syncUnsyncedBrcTokens(log, type, rateLimitContext)
     return {
       blocksSynced,
       blocksSkippedOrFailed,
@@ -123,8 +123,9 @@ async function syncBlocks(log: Logger, type: BrcType, lastSyncHeight: number, cu
   return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, tokensUnsynced: tickers.size }
 }
 
-async function syncUnsyncedBrcTokens(log: Logger, rateLimitContext: RateLimitContext) {
-  const unsyncedTokens = await database.brcToken.find({ synced: false })
+async function syncUnsyncedBrcTokens(log: Logger, type: BrcType, rateLimitContext: RateLimitContext) {
+  const tickerLengthFilter = type === BrcType.SixByte ? { tickerLength: 6 } : { tickerLength: { $ne: 6 } }
+  const unsyncedTokens = await database.brcToken.find({ synced: false, ...tickerLengthFilter })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
 
   if (unsyncedTokens.length === 0) {
