@@ -5,7 +5,7 @@ export interface MempoolTransaction {
   mintId?: string
 }
 
-export interface AlkaneTokenV2 {
+export interface AlkaneToken {
   alkaneId: string
   name: string
   symbol: string
@@ -128,7 +128,7 @@ export interface MintTransaction {
 
 export const CollectionName = {
   MempoolTransaction: 'mempool_transactions',
-  AlkaneTokenV2: 'alkane_tokens_v2',
+  AlkaneToken: 'alkane_tokens_v2',
   BlockHeight: 'block_heights',
   UnconfirmedTransaction: 'unconfirmed_transactions',
   ConfirmedTransaction: 'confirmed_transactions',
@@ -140,7 +140,7 @@ export type CollectionName = (typeof CollectionName)[keyof typeof CollectionName
 
 export interface DataBaseType {
   [CollectionName.MempoolTransaction]: MempoolTransaction
-  [CollectionName.AlkaneTokenV2]: AlkaneTokenV2
+  [CollectionName.AlkaneToken]: AlkaneToken
   [CollectionName.BlockHeight]: BlockHeight
   [CollectionName.UnconfirmedTransaction]: UnconfirmedTransaction
   [CollectionName.ConfirmedTransaction]: ConfirmedTransaction

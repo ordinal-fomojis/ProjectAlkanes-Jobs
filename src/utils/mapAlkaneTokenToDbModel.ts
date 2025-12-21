@@ -1,5 +1,5 @@
 import { bigDecimal } from 'js-big-decimal'
-import { AlkaneTokenV2 } from '../database/collections.js'
+import { AlkaneToken } from '../database/collections.js'
 import { UnisatAlkaneToken } from './unisat/getAlkaneById.js'
 
 const ZERO = new bigDecimal(0)
@@ -46,7 +46,7 @@ export function mapAlkaneTokenToDbModel(
     mintable: token.alkaneid === '2:0' || token.tokenData.mintable,
     holdersCount: token.tokenData.holders,
     hasPremine
-  } satisfies Omit<AlkaneTokenV2, 'alkaneId' | 'pendingMints'>
+  } satisfies Omit<AlkaneToken, 'alkaneId' | 'pendingMints'>
 }
 
 function toAlkaneValue(val: string | number, token: UnisatAlkaneToken) {

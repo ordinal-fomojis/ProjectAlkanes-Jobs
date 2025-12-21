@@ -2,7 +2,7 @@ import { Document } from "mongodb"
 import { CollectionName } from "./collections.js"
 import { database } from "./database.js"
 
-export async function syncMempoolMintsV2(match: Document | null) {
+export async function syncMempoolMints(match: Document | null) {
   const pipeline: Document[] = []
   if (match != null) {
     pipeline.push({ $match: match })
@@ -24,12 +24,12 @@ export async function syncMempoolMintsV2(match: Document | null) {
     },
     {
       $merge: {
-        into: CollectionName.AlkaneTokenV2,
+        into: CollectionName.AlkaneToken,
         whenMatched: 'replace',
         whenNotMatched: 'discard'
       }
     }
   )
 
-  await database.alkaneTokenV2.aggregate(pipeline).toArray()
+  await database.alkaneToken.aggregate(pipeline).toArray()
 }

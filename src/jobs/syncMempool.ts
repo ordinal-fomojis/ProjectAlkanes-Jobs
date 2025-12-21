@@ -1,6 +1,6 @@
 import { Transaction } from "bitcoinjs-lib"
 import { database } from "../database/database.js"
-import { syncMempoolMintsV2 } from "../database/syncCalculatedFields.js"
+import { syncMempoolMints } from "../database/syncCalculatedFields.js"
 import { decodeAlkaneOpCallsInTransaction } from "../utils/decoder.js"
 import { Logger } from "../utils/Logger.js"
 import { getMempoolTransactionIds } from "../utils/rpc/getMempoolTransactionIds.js"
@@ -45,7 +45,7 @@ export async function syncMempool(log: Logger) {
 
     if (modifiedAlkanes.size > 0) {
       log.info(`Syncing ${modifiedAlkanes.size.toString()} alkanes due to mempool changes.`)
-      await syncMempoolMintsV2({ alkaneId: { $in: Array.from(modifiedAlkanes) } })
+      await syncMempoolMints({ alkaneId: { $in: Array.from(modifiedAlkanes) } })
     } else {
       log.info("No alkanes to sync from mempool changes.")
     }

@@ -12,8 +12,8 @@ class Database {
     return this.getCollection(CollectionName.BlockHeight)
   }
 
-  get alkaneTokenV2() {
-    return this.getCollection(CollectionName.AlkaneTokenV2)
+  get alkaneToken() {
+    return this.getCollection(CollectionName.AlkaneToken)
   }
 
   get mempoolTransaction() {

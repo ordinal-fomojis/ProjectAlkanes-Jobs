@@ -1,6 +1,6 @@
-import { AlkaneTokenV2 } from "../database/collections.js"
+import { AlkaneToken } from "../database/collections.js"
 import { database } from "../database/database.js"
-import { syncMempoolMintsV2 } from "../database/syncCalculatedFields.js"
+import { syncMempoolMints } from "../database/syncCalculatedFields.js"
 import { getInteractedAlkaneTokensInBlock } from "../utils/getInteractedAlkaneTokensInBlock.js"
 import { Logger } from "../utils/Logger.js"
 import { mapAlkaneTokenToDbModel } from "../utils/mapAlkaneTokenToDbModel.js"
@@ -34,9 +34,9 @@ const DEFAULT_ALKANE_TOKEN = {
   mintable: false,
   holdersCount: 0,
   pendingMints: 0
-} satisfies Omit<AlkaneTokenV2, 'alkaneId' | 'synced'>
+} satisfies Omit<AlkaneToken, 'alkaneId' | 'synced'>
 
-export async function syncAlkaneTokensV2(log: Logger) {
+export async function syncAlkaneTokens(log: Logger) {
   const rateLimitContext = createRateLimitContext(UnisatRateLimitOptions)
   
   log.info("Starting Alkane token sync...")
@@ -100,12 +100,12 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
 
     if (ids.size === 0) return
 
-    await database.alkaneTokenV2.bulkWrite(Array.from(ids).map(alkaneId => ({
+    await database.alkaneToken.bulkWrite(Array.from(ids).map(alkaneId => ({
       updateOne: {
         filter: { alkaneId },
         update: {
           $set: { synced: false },
-          $setOnInsert: DEFAULT_ALKANE_TOKEN satisfies Omit<AlkaneTokenV2, 'alkaneId' | 'synced'>
+          $setOnInsert: DEFAULT_ALKANE_TOKEN satisfies Omit<AlkaneToken, 'alkaneId' | 'synced'>
         },
         upsert: true
       }
@@ -116,7 +116,7 @@ async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: nu
 }
 
 async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimitContext) {
-  const unsyncedTokens = await database.alkaneTokenV2.find({ synced: false })
+  const unsyncedTokens = await database.alkaneToken.find({ synced: false })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
 
   if (unsyncedTokens.length === 0) {
@@ -145,7 +145,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
   if (successfulAlkanes.length === 0) 
     return { syncedAlkanes: 0, failedToSync: unsyncedTokens.length }
 
-  await database.alkaneTokenV2.bulkWrite([
+  await database.alkaneToken.bulkWrite([
     ...tokens.map(token => ({
       updateOne: {
         filter: { alkaneId: token.alkaneid },
@@ -161,7 +161,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
     ])
   ])
 
-  await syncMempoolMintsV2({ alkaneId: { $in: tokens.map(x => x.alkaneid) } })
+  await syncMempoolMints({ alkaneId: { $in: tokens.map(x => x.alkaneid) } })
 
   return { syncedAlkanes: successfulAlkanes.length, failedToSync: alkanes.length - successfulAlkanes.length }
 }
@@ -180,7 +180,7 @@ async function initialSync(log: Logger, blockHeight: number, rateLimitContext: R
 
     if (tokens.length === 0) return
 
-    await database.alkaneTokenV2.bulkWrite(tokens.map(token => {
+    await database.alkaneToken.bulkWrite(tokens.map(token => {
       return {
         updateOne: {
           filter: { alkaneId: token.alkaneid },
@@ -191,7 +191,7 @@ async function initialSync(log: Logger, blockHeight: number, rateLimitContext: R
     }))
   })
 
-  await syncMempoolMintsV2(null)
+  await syncMempoolMints(null)
 
   return tokens.length
 }

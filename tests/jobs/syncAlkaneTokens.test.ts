@@ -1,9 +1,9 @@
 import { WithId } from "mongodb"
 import { MongoMemoryServer } from "mongodb-memory-server"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
-import { AlkaneTokenV2 } from "../../src/database/collections.js"
+import { AlkaneToken } from "../../src/database/collections.js"
 import { database } from "../../src/database/database.js"
-import { syncAlkaneTokensV2 } from "../../src/jobs/syncAlkaneTokensV2.js"
+import { syncAlkaneTokens } from "../../src/jobs/syncAlkaneTokens.js"
 import { DB_NAME } from "../../src/utils/constants.js"
 import { getInteractedAlkaneTokensInBlock } from "../../src/utils/getInteractedAlkaneTokensInBlock.js"
 import { mapAlkaneTokenToDbModel } from "../../src/utils/mapAlkaneTokenToDbModel.js"
@@ -27,7 +27,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => {
-  await database.alkaneTokenV2.deleteMany({})
+  await database.alkaneToken.deleteMany({})
   await database.syncStatus.deleteMany()
 })
 
@@ -84,7 +84,7 @@ async function setup({ lastSyncedHeight = null, currentBlockHeight = 900000, dbA
   mockAlkanesById(currentAlkaneTokens)
 
   if (dbAlkaneTokens.length > 0) {
-    await database.alkaneTokenV2.insertMany(dbAlkaneTokens.map(token => ({
+    await database.alkaneToken.insertMany(dbAlkaneTokens.map(token => ({
       alkaneId: token.alkaneid, pendingMints: 0,
       ...mapAlkaneTokenToDbModel(token, { synced: true, initialised: true })
     })))
@@ -112,7 +112,7 @@ describe('syncAlkaneTokens', () => {
   it('should do initial sync if no sync status exists', async () => {
     const { currentAlkaneTokens } = await setup({ currentBlockHeight: 900000, dbAlkaneTokens: [] })
 
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -123,7 +123,7 @@ describe('syncAlkaneTokens', () => {
     })
 
     for (const token of currentAlkaneTokens) {
-      const dbToken = await database.alkaneTokenV2.findOne({ alkaneId: token.alkaneid })
+      const dbToken = await database.alkaneToken.findOne({ alkaneId: token.alkaneid })
       compareDbTokenData(dbToken, token)
       expect(dbToken?.initialised).toBe(true)
       expect(dbToken?.synced).toBe(true)
@@ -143,7 +143,7 @@ describe('syncAlkaneTokens', () => {
       .mockResolvedValueOnce(new Set(currentAlkaneTokens.slice(0, 7).map(x => x.alkaneid)))
       .mockResolvedValueOnce(new Set(currentAlkaneTokens.slice(3).map(x => x.alkaneid)))
 
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -164,7 +164,7 @@ describe('syncAlkaneTokens', () => {
     expect(getAlkanesByIds).toHaveBeenCalledWith(currentAlkaneTokens.map(x => x.alkaneid), expect.any(Object))
 
     for (const token of currentAlkaneTokens) {
-      const dbToken = await database.alkaneTokenV2.findOne({ alkaneId: token.alkaneid })
+      const dbToken = await database.alkaneToken.findOne({ alkaneId: token.alkaneid })
       compareDbTokenData(dbToken, token)
       expect(dbToken?.initialised).toBe(true)
       expect(dbToken?.synced).toBe(true)
@@ -181,7 +181,7 @@ describe('syncAlkaneTokens', () => {
       .mockResolvedValueOnce(new Set(currentAlkaneTokens.slice(0, 1).map(x => x.alkaneid)))
       .mockRejectedValueOnce(new Error('Network error'))
 
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -205,7 +205,7 @@ describe('syncAlkaneTokens', () => {
       currentBlockHeight: 900000
     })
 
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -236,7 +236,7 @@ describe('syncAlkaneTokens', () => {
 
     mockAlkanesById(currentAlkaneTokens, [existingFail.alkaneid, nonExistingFail.alkaneid])
     
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 1,
@@ -246,20 +246,20 @@ describe('syncAlkaneTokens', () => {
       failedToSync: 2
     })
 
-    const existingFailFromDb = await database.alkaneTokenV2.findOne({ alkaneId: existingFail.alkaneid })
+    const existingFailFromDb = await database.alkaneToken.findOne({ alkaneId: existingFail.alkaneid })
     expect(existingFailFromDb?.synced).toBe(false)
     expect(existingFailFromDb?.initialised).toBe(true)
 
-    const existingSuccessFromDb = await database.alkaneTokenV2.findOne({ alkaneId: existingSuccess.alkaneid })
+    const existingSuccessFromDb = await database.alkaneToken.findOne({ alkaneId: existingSuccess.alkaneid })
     expect(existingSuccessFromDb?.synced).toBe(true)
     expect(existingSuccessFromDb?.initialised).toBe(true)
     compareDbTokenData(existingSuccessFromDb, existingSuccess)
 
-    const nonExistingFailFromDb = await database.alkaneTokenV2.findOne({ alkaneId: nonExistingFail.alkaneid })
+    const nonExistingFailFromDb = await database.alkaneToken.findOne({ alkaneId: nonExistingFail.alkaneid })
     expect(nonExistingFailFromDb?.synced).toBe(false)
     expect(nonExistingFailFromDb?.initialised).toBe(false)
 
-    const nonExistingSuccessFromDb = await database.alkaneTokenV2.findOne({ alkaneId: nonExistingSuccess.alkaneid })
+    const nonExistingSuccessFromDb = await database.alkaneToken.findOne({ alkaneId: nonExistingSuccess.alkaneid })
     expect(nonExistingSuccessFromDb?.synced).toBe(true)
     expect(nonExistingSuccessFromDb?.initialised).toBe(true)
     compareDbTokenData(nonExistingSuccessFromDb, nonExistingSuccess)
@@ -278,7 +278,7 @@ describe('syncAlkaneTokens', () => {
 
     vi.mocked(getAlkanesByIds).mockResolvedValue([])
 
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 2,
@@ -304,7 +304,7 @@ describe('syncAlkaneTokens', () => {
 
     vi.mocked(getAlkanesByIds).mockResolvedValue([])
 
-    const result = await syncAlkaneTokensV2(new MockLogger())
+    const result = await syncAlkaneTokens(new MockLogger())
 
     expect(result).toEqual({
       blocksSynced: 0,
@@ -319,7 +319,7 @@ describe('syncAlkaneTokens', () => {
 })
 
 
-function compareDbTokenData(dbToken: WithId<AlkaneTokenV2> | null, token: UnisatAlkaneToken) {
+function compareDbTokenData(dbToken: WithId<AlkaneToken> | null, token: UnisatAlkaneToken) {
   expect(dbToken).toBeDefined()
   
   expect(dbToken?.name).toBe(token.tokenData.name)
