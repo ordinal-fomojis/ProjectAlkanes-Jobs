@@ -12,10 +12,6 @@ class Database {
     return this.getCollection(CollectionName.BlockHeight)
   }
 
-  get alkaneToken() {
-    return this.getCollection(CollectionName.AlkaneToken)
-  }
-
   get alkaneTokenV2() {
     return this.getCollection(CollectionName.AlkaneTokenV2)
   }

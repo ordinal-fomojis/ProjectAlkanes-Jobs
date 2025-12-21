@@ -5,32 +5,6 @@ export interface MempoolTransaction {
   mintId?: string
 }
 
-export interface AlkaneToken {
-  alkaneId: string
-  name: string | null
-  symbol: string | null
-  logoUrl: string | null
-  preminedSupply: string
-  amountPerMint: string | null
-  mintCountCap: string | null
-  // Numeric approximation for indexing/sorting.
-  // Will typically be exact, but for large values we will get numeric rounding,
-  // so calculations should use mintCountCap.
-  approximateMintCountCap: number | null
-  currentSupply: string
-  currentMintCount: number
-  deployTxid: string | null
-  deployTimestamp: Date | null
-  synced: boolean
-  blockSyncedAt: number
-  clonedFrom: string | null
-  percentageMinted: number | null
-  maxSupply: string | null
-  mintedOut: boolean
-  preminedPercentage: number | null
-  hasPremine: boolean
-}
-
 export interface AlkaneTokenV2 {
   alkaneId: string
   name: string
@@ -154,7 +128,6 @@ export interface MintTransaction {
 
 export const CollectionName = {
   MempoolTransaction: 'mempool_transactions',
-  AlkaneToken: 'alkane_tokens',
   AlkaneTokenV2: 'alkane_tokens_v2',
   BlockHeight: 'block_heights',
   UnconfirmedTransaction: 'unconfirmed_transactions',
@@ -167,7 +140,6 @@ export type CollectionName = (typeof CollectionName)[keyof typeof CollectionName
 
 export interface DataBaseType {
   [CollectionName.MempoolTransaction]: MempoolTransaction
-  [CollectionName.AlkaneToken]: AlkaneToken
   [CollectionName.AlkaneTokenV2]: AlkaneTokenV2
   [CollectionName.BlockHeight]: BlockHeight
   [CollectionName.UnconfirmedTransaction]: UnconfirmedTransaction

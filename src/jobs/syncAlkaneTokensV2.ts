@@ -1,5 +1,6 @@
 import { AlkaneTokenV2 } from "../database/collections.js"
 import { database } from "../database/database.js"
+import { syncMempoolMintsV2 } from "../database/syncCalculatedFields.js"
 import { getInteractedAlkaneTokensInBlock } from "../utils/getInteractedAlkaneTokensInBlock.js"
 import { Logger } from "../utils/Logger.js"
 import { mapAlkaneTokenToDbModel } from "../utils/mapAlkaneTokenToDbModel.js"
@@ -160,6 +161,8 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
     ])
   ])
 
+  await syncMempoolMintsV2({ alkaneId: { $in: tokens.map(x => x.alkaneid) } })
+
   return { syncedAlkanes: successfulAlkanes.length, failedToSync: alkanes.length - successfulAlkanes.length }
 }
 
@@ -187,6 +190,8 @@ async function initialSync(log: Logger, blockHeight: number, rateLimitContext: R
       }
     }))
   })
+
+  await syncMempoolMintsV2(null)
 
   return tokens.length
 }
