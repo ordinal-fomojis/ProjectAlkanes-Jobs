@@ -35,8 +35,10 @@ export type UnisatAlkaneToken = z.infer<typeof UnisatAlkaneTokenSchema>
 export const UnisatAlkaneSchema = z.union([UnisatAlkaneNonTokenSchema, UnisatAlkaneTokenSchema])
 export type UnisatAlkane = z.infer<typeof UnisatAlkaneSchema>
 
-export async function getAlkaneById(id: string, rateLimitContext?: RateLimitContext) {
-  return await unisatFetch(UnisatAlkaneSchema, `/alkanes/${encodeURIComponent(id)}/info`, rateLimitContext)
+type AlkaneResponse = { id: string } & ({ exists: false } | { exists: true, data: UnisatAlkane })
+
+async function getAlkaneById(id: string, rateLimitContext?: RateLimitContext) {
+  return await unisatFetch(UnisatAlkaneSchema, `/alkanes/${encodeURIComponent(id)}/info`, rateLimitContext, true)
 }
 
 type PromiseResult<T> = {
@@ -47,13 +49,19 @@ type PromiseResult<T> = {
     reason: unknown
 }
 
+// Response of null indicates a successful request, but the alkane does not exist
 export async function getAlkanesByIds(ids: string[], rateLimitContext?: RateLimitContext) {
   rateLimitContext ??= createRateLimitContext(UnisatRateLimitOptions)
 
-  const results: PromiseResult<z.output<typeof UnisatAlkaneSchema>>[] = []
+  const results: PromiseResult<AlkaneResponse>[] = []
   for (const id of ids) {
     try {
-      results.push({ status: 'fulfilled', value: await getAlkaneById(id, rateLimitContext) })
+      const alkane = await getAlkaneById(id, rateLimitContext)
+      if (alkane == null) {
+        results.push({ status: 'fulfilled', value: { id, exists: false } })
+      } else {
+        results.push({ status: 'fulfilled', value: { id, exists: true, data: alkane } })
+      }
     } catch (error) {
       results.push({ status: "rejected", reason: error })
     }

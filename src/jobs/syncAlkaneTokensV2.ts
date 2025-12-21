@@ -129,8 +129,8 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
   const successfulAlkanes = alkanes.filter(r => r.status === 'fulfilled').map(r => r.value)
   const failedAlkanes = alkanes.filter(r => r.status === 'rejected').map(r => r.reason)
 
-  const nonTokens = successfulAlkanes.filter(a => a.type !== "token")
-  const tokens = successfulAlkanes.filter(a => a.type === "token")
+  const nonTokens = successfulAlkanes.filter(a => !a.exists || a.data.type !== "token").map(a => a.id)
+  const tokens = successfulAlkanes.filter(a => a.exists).map(a => a.data).filter(a => a.type === "token")
 
   if (failedAlkanes.length > 0) {
     log.warn(`Failed to fetch ${failedAlkanes.length} tokens`)
@@ -154,7 +154,7 @@ async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimit
     ...(nonTokens.length === 0 ? [] : [
       {
         deleteMany: {
-          filter: { alkaneId: { $in: nonTokens.map(c => c.alkaneid) } }
+          filter: { alkaneId: { $in: nonTokens } }
         }
       }
     ])

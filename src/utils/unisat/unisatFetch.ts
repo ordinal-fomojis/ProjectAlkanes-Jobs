@@ -20,7 +20,11 @@ export const UnisatRateLimitOptions: RateLimitOptions = {
   }
 }
 
-export async function unisatFetch<Output, Input>(schema: z.ZodType<Output, Input>, path: string, rateLimitContext: RateLimitContext | undefined) {
+type UnisatFetchResponse<Output, AllowNull extends boolean> = AllowNull extends true ? Output | null : Output
+
+export async function unisatFetch<Output, Input, AllowNull extends boolean = false>(
+  schema: z.ZodType<Output, Input>, path: string, rateLimitContext: RateLimitContext | undefined, allowNull?: AllowNull
+): Promise<UnisatFetchResponse<Output, AllowNull>> {
   const baseUrl = `https://open-api${BITCOIN_NETWORK === 'mainnet' ? '' : '-testnet'}.unisat.io/v1/indexer`
   
   const unisatSchema = z.object({
@@ -33,8 +37,8 @@ export async function unisatFetch<Output, Input>(schema: z.ZodType<Output, Input
     headers: { Authorization: `Bearer ${UNISAT_API_KEY}` }
   }, rateLimitContext ?? createRateLimitContext(UnisatRateLimitOptions))
 
-  if (code === -1 || data == null) {
+  if (code === -1 || (data == null && !allowNull)) {
     throw new Error(`Unisat request to ${path} failed with message: ${msg}`)
   }
-  return data
+  return data as UnisatFetchResponse<Output, AllowNull>
 }
