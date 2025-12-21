@@ -51,7 +51,7 @@ describe('unisatFetch', () => {
       .rejects.toThrow('Unisat request to /empty-response failed with message: Success')
   })
 
-  it('should not throw error when data is null is allowNull flag is passed', async () => {
+  it('should not throw error when data is null and allowNull is true', async () => {
     vi.mocked(retrySchemaFetch).mockResolvedValueOnce({
       code: 0,
       msg: 'Success',
