@@ -99,10 +99,12 @@ async function setup({ lastSyncedHeight = null, currentBlockHeight = 900000, dbA
 function mockAlkanesById(alkaneTokens: UnisatAlkaneToken[], failedIds: string[] = []) {
   vi.mocked(getAlkanesByIds).mockImplementation(ids => Promise.resolve(ids.map(id => {
     const token = alkaneTokens.find(token => token.alkaneid === id)
-    if (failedIds.includes(id) || token == null) {
+    if (failedIds.includes(id)) {
       return { status: 'rejected', reason: new Error('Failed to fetch id') } as const
+    } else if (token == null) {
+      return { status: 'fulfilled', value: { id, exists: false } } as const
     }
-    return { status: 'fulfilled', value: token } as const
+    return { status: 'fulfilled', value: { id: token.alkaneid, exists: true, data: token} } as const
   })))
 }
 
