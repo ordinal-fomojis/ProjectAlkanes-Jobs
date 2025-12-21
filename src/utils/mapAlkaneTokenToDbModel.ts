@@ -42,7 +42,8 @@ export function mapAlkaneTokenToDbModel(
     deployTimestamp: new Date(token.timestamp * 1000),
     percentageMinted: parseFloat(percentageMinted.getValue()),
     preminedPercentage: parseFloat(preminedPercentage.getValue()),
-    mintable: token.tokenData.mintable,
+    // Unisat returns mintable as false for '2:0' (DIESEL) even though it is mintable
+    mintable: token.alkaneid === '2:0' || token.tokenData.mintable,
     holdersCount: token.tokenData.holders,
     hasPremine
   } satisfies Omit<AlkaneTokenV2, 'alkaneId' | 'pendingMints'>
