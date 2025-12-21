@@ -16,10 +16,6 @@ class Database {
     return this.getCollection(CollectionName.AlkaneToken)
   }
 
-  get alkaneTokenV2() {
-    return this.getCollection(CollectionName.AlkaneTokenV2)
-  }
-
   get mempoolTransaction() {
     return this.getCollection(CollectionName.MempoolTransaction)
   }

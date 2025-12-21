@@ -1,144 +1,209 @@
-import { BlockHeight } from "../database/collections.js"
+import { AlkaneToken } from "../database/collections.js"
 import { database } from "../database/database.js"
-import { syncCalculatedFields } from "../database/syncCalculatedFields.js"
-import { decodeAlkaneOpCallsInBlock } from "../utils/decoder.js"
+import { syncMempoolMints } from "../database/syncCalculatedFields.js"
+import { getInteractedAlkaneTokensInBlock } from "../utils/getInteractedAlkaneTokensInBlock.js"
 import { Logger } from "../utils/Logger.js"
-import { getAlkaneIdsAfterTimestamp, getAlkaneTokens } from "../utils/ordiscan/getAlkanes.js"
+import { mapAlkaneTokenToDbModel } from "../utils/mapAlkaneTokenToDbModel.js"
+import { createRateLimitContext, RateLimitContext } from "../utils/rateLimit.js"
 import { getBlockHeight } from "../utils/rpc/getBlockHeight.js"
-import { getBlockTimestamp } from "../utils/rpc/getBlockTimestamp.js"
-import { getRawBlocks } from "../utils/rpc/getRawBlocks.js"
+import { getAlkanesByIds } from "../utils/unisat/getAlkaneById.js"
+import { getAllAlkaneTokens } from "../utils/unisat/getAllAlkaneTokens.js"
+import { getBestAlkaneBlockHeight } from "../utils/unisat/getBestAlkaneBlockHeight.js"
+import { UnisatRateLimitOptions } from "../utils/unisat/unisatFetch.js"
 
 const MAX_TOKENS_PER_SYNC = 50
-const MAX_BLOCKS_PER_BATCH = 3
+
+const DEFAULT_ALKANE_TOKEN = {
+  name: "",
+  symbol: "",
+  logoUrl: "",
+  preminedSupply: "0",
+  amountPerMint: "0",
+  mintCountCap: "0",
+  approximateMintCountCap: 0,
+  currentSupply: "0",
+  currentMintCount: 0,
+  deployTxid: "",
+  deployTimestamp: new Date(0),
+  initialised: false,
+  percentageMinted: 0,
+  maxSupply: "0",
+  mintedOut: false,
+  preminedPercentage: 0,
+  hasPremine: false,
+  mintable: false,
+  holdersCount: 0,
+  pendingMints: 0
+} satisfies Omit<AlkaneToken, 'alkaneId' | 'synced'>
 
 export async function syncAlkaneTokens(log: Logger) {
-  log.info("Starting Alkane token sync...")
-  const lastSyncBlockHeight = await database.blockHeight.find().sort({ height: 'desc' }).limit(1).next()
-  log.info(`Last synced block height: ${(lastSyncBlockHeight?.height)?.toString() ?? 'none'}`)
-  const currentBlockHeight = await getBlockHeight()
-  log.info(`Current block height: ${currentBlockHeight.toString()}`)
+  const rateLimitContext = createRateLimitContext(UnisatRateLimitOptions)
   
-  const { blocksSynced, tokensUnsynced } = await syncBlocks(log, lastSyncBlockHeight?.height ?? null, currentBlockHeight)
-  const { tokensFetched } = await fetchNewTokens(log, lastSyncBlockHeight, currentBlockHeight)
-  const { syncedTokens, failedToSync } = await syncUnsyncedAlkaneTokens(log, currentBlockHeight)
+  log.info("Starting Alkane token sync...")
+
+  const lastSyncBlockHeight = (await database.syncStatus.findOne())?.alkaneSyncBlockHeight ?? null
+  log.info(`Last synced block height: ${lastSyncBlockHeight?.toString() ?? 'none'}`)
+
+  const currentBlockHeight = await getBlockHeightToSyncTo(lastSyncBlockHeight, rateLimitContext)
+  log.info(`Current block height: ${currentBlockHeight.toString()}`)
 
   if (lastSyncBlockHeight == null) {
-    log.info(`First sync. Inserting block height: ${currentBlockHeight.toString()}`)
-    await database.blockHeight.insertOne({
-      height: currentBlockHeight,
-      synced: true,
-      timestamp: await getBlockTimestamp(currentBlockHeight)
-    })
-  }
-
-  return {
-    blocksSynced,
-    tokensInBlocks: tokensUnsynced,
-    newTokens: tokensFetched,
-    syncedTokens,
-    failedToSync
-  }
-}
-
-// Fetches unsynced blocks. Each block successfully fetched and decoded is marked as synced,
-// and any tokens interacted with in the block are unsynced.
-async function syncBlocks(log: Logger, lastSyncHeight: number | null, currentHeight: number) {
-  // Unsynced blocks are all those since the last sync, and any marked as unsynced in the database
-  const blocksSinceLastSync = lastSyncHeight == null ? []
-    : Array.from({ length: currentHeight - lastSyncHeight }, (_, i) => i + lastSyncHeight + 1)
-  const unsyncedBlocks = (await database.blockHeight.find({ synced: false }).toArray())
-    .map(b => b.height).concat(blocksSinceLastSync).slice(0, MAX_BLOCKS_PER_BATCH)
-
-  if (unsyncedBlocks.length === 0) return { blocksSynced: 0, tokensUnsynced: 0 }
-
-  let unsyncedTokenCount = 0
-  for (let i = 0; i < unsyncedBlocks.length; i += MAX_BLOCKS_PER_BATCH) {
-    const blockResponses = await getRawBlocks(unsyncedBlocks.slice(i, i + MAX_BLOCKS_PER_BATCH))
-    const tokenIds = new Set(blockResponses.filter(b => b.success)
-      .flatMap(b => decodeAlkaneOpCallsInBlock(b.response))
-      .flatMap(b => b.opcalls.map(o => o.alkaneId)))
-    
-    await database.withTransaction(async () => {    
-      await database.blockHeight.bulkWrite(blockResponses.map(b => ({
-        updateOne: {
-          filter: { height: b.height },
-          update: { $set: {
-            height: b.height,
-            timestamp: b.success ? new Date(b.response.timestamp * 1000) : new Date(0),
-            synced: b.success
-          } },
-          upsert: true
-        }
-      })))
-
-      await database.alkaneToken.updateMany(
-        { alkaneId: { $in: Array.from(tokenIds) } },
-        { $set: { synced: false } }
-      )
-    })
-    log.info(`Synced ${blockResponses.length.toString()} blocks`)
-    log.info(`Unsynced ${tokenIds.size.toString()} tokens`)
-    unsyncedTokenCount += tokenIds.size
-  }
-
-  return { blocksSynced: unsyncedBlocks.length, tokensUnsynced: unsyncedTokenCount }
-}
-
-// Fetch list of alkanes after the given timestamp, or all if no timestamp is provided,
-// and save them to the database as unsynced tokens.
-async function fetchNewTokens(log: Logger, lastSyncedBlock: BlockHeight | null, currentBlockHeight: number) {
-  if (lastSyncedBlock?.height === currentBlockHeight) return { tokensFetched: 0 }
-
-  const alkanes = await getAlkaneIdsAfterTimestamp(lastSyncedBlock?.timestamp ?? null)
-  if (alkanes.length === 0) return { tokensFetched: 0 }
-
-  await database.alkaneToken.bulkWrite(alkanes.map(token => ({
-    updateOne: {
-      filter: { alkaneId: token.alkaneId },
-      update: { $setOnInsert: {
-        ...token,
-        synced: false,
-        blockSyncedAt: 0
-      } },
-      upsert: true
+    const tokenCount = await initialSync(log, currentBlockHeight, rateLimitContext)
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, alkanesUnsynced: 0, syncedAlkanes: tokenCount, failedToSync: 0 }
+  } else {
+    const { blocksSynced, blocksSkippedOrFailed, alkanesUnsynced }
+      = await syncBlocks(log, lastSyncBlockHeight, currentBlockHeight)
+    const { syncedAlkanes, failedToSync } = await syncUnsyncedAlkaneTokens(log, rateLimitContext)
+    return {
+      blocksSynced,
+      blocksSkippedOrFailed,
+      alkanesUnsynced,
+      syncedAlkanes,
+      failedToSync
     }
-  })))
-
-  await syncCalculatedFields({ alkaneId: { $in: alkanes.map(x => x.alkaneId) } }, { syncPendingMints: true })
-  log.info(`Fetched and saved ${alkanes.length} new tokens`)
-  return { tokensFetched: alkanes.length }
+  }
 }
 
-// Syncs all tokens marked as unsynced in the database.
-async function syncUnsyncedAlkaneTokens(log: Logger, currentBlockHeight: number) {
+// Fetches tokens interacted with in new blocks. These are marked as unsynced, and the synced block height is updated.
+async function syncBlocks(log: Logger, lastSyncHeight: number, currentHeight: number) {
+  const ids = new Set<string>()
+  let syncedUpTo = lastSyncHeight
+  for (let height = lastSyncHeight + 1; height <= currentHeight; height++) {
+    try {
+      log.info(`Syncing block height: ${height.toString()}`)
+      const idsInBlock = await getInteractedAlkaneTokensInBlock(height)
+      log.info(`Found ${idsInBlock.size} tokens in block height ${height.toString()}`)
+      idsInBlock.forEach(id => ids.add(id))
+      syncedUpTo = height
+    } catch (error) {
+      log.warn(`Error syncing block height ${height.toString()}: ${error instanceof Error ? error.message : String(error)}. Saving current progress and skipping future blocks until next sync.`)
+      break
+    }
+  }
+
+  const syncedBlocks = syncedUpTo - lastSyncHeight
+  if (syncedBlocks === 0 && ids.size === 0) {
+    log.info(`Did not sync any blocks or tokens.`)
+    return { blocksSynced: 0, blocksSkippedOrFailed: 0, alkanesUnsynced: 0 }
+  }
+  
+  const unsyncedBlocks = currentHeight - syncedUpTo
+  log.info(`Found ${ids.size} unique tokens across ${syncedBlocks} synced blocks.`)
+  if (unsyncedBlocks > 0)
+    log.info(`Skipped ${unsyncedBlocks} blocks due to errors.`)
+
+  await database.withTransaction(async () => {
+    await database.syncStatus.updateOne(
+      {},
+      { $set: { alkaneSyncBlockHeight: syncedUpTo } }
+    )
+
+    if (ids.size === 0) return
+
+    await database.alkaneToken.bulkWrite(Array.from(ids).map(alkaneId => ({
+      updateOne: {
+        filter: { alkaneId },
+        update: {
+          $set: { synced: false },
+          $setOnInsert: DEFAULT_ALKANE_TOKEN satisfies Omit<AlkaneToken, 'alkaneId' | 'synced'>
+        },
+        upsert: true
+      }
+    })))
+  })
+
+  return { blocksSynced: syncedBlocks, blocksSkippedOrFailed: unsyncedBlocks, alkanesUnsynced: ids.size }
+}
+
+async function syncUnsyncedAlkaneTokens(log: Logger, rateLimitContext: RateLimitContext) {
   const unsyncedTokens = await database.alkaneToken.find({ synced: false })
-    .sort({ blockSyncedAt: 'asc' })
     .limit(MAX_TOKENS_PER_SYNC).toArray()
-  log.info(`Syncing ${unsyncedTokens.length} tokens`)
 
-  const tokens = await getAlkaneTokens(unsyncedTokens, currentBlockHeight)
-  const successfulTokens = tokens.filter(r => r.status === 'fulfilled').map(r => r.value)
-  log.info(`Successfully fetched ${successfulTokens.length} tokens`)
+  if (unsyncedTokens.length === 0) {
+    log.info(`No unsynced Alkane tokens found`)
+    return { syncedAlkanes: 0, failedToSync: 0 }
+  }
+  log.info(`Syncing ${unsyncedTokens.length} unsynced Alkane tokens`)
 
-  const failedTokens = tokens.filter(r => r.status === 'rejected').map(r => r.reason)
-  if (failedTokens.length > 0) {
-    log.warn(`Failed to fetch ${failedTokens.length} tokens`)
-    for (const error of failedTokens) {
+  const alkanes = await getAlkanesByIds(unsyncedTokens.map(t => t.alkaneId), rateLimitContext)
+
+  const successfulAlkanes = alkanes.filter(r => r.status === 'fulfilled').map(r => r.value)
+  const failedAlkanes = alkanes.filter(r => r.status === 'rejected').map(r => r.reason)
+
+  const nonTokens = successfulAlkanes.filter(a => !a.exists || a.data.type !== "token").map(a => a.id)
+  const tokens = successfulAlkanes.filter(a => a.exists).map(a => a.data).filter(a => a.type === "token")
+
+  if (failedAlkanes.length > 0) {
+    log.warn(`Failed to fetch ${failedAlkanes.length} tokens`)
+    for (const error of failedAlkanes) {
       log.warn(`Failed to fetch token with error: `, error)
     }
   }
-  
-  if (successfulTokens.length === 0) return { syncedTokens: 0, failedToSync: unsyncedTokens.length }
 
-  await database.alkaneToken.bulkWrite(successfulTokens.map(token => ({
-    updateOne: {
-      filter: { alkaneId: token.alkaneId },
-      update: { $set: token },
-      upsert: true
-    }
-  })))
-  
-  await syncCalculatedFields({ alkaneId: { $in: successfulTokens.map(x => x.alkaneId) } }, { syncMintable: true })
+  log.info(`Successfully fetched ${tokens.length} tokens and ${nonTokens.length} non-tokens`)
 
-  return { syncedTokens: successfulTokens.length, failedToSync: tokens.length - successfulTokens.length }
+  if (successfulAlkanes.length === 0) 
+    return { syncedAlkanes: 0, failedToSync: unsyncedTokens.length }
+
+  await database.alkaneToken.bulkWrite([
+    ...tokens.map(token => ({
+      updateOne: {
+        filter: { alkaneId: token.alkaneid },
+        update: { $set: mapAlkaneTokenToDbModel(token, { synced: true, initialised: true }) }
+      }
+    })),
+    ...(nonTokens.length === 0 ? [] : [
+      {
+        deleteMany: {
+          filter: { alkaneId: { $in: nonTokens } }
+        }
+      }
+    ])
+  ])
+
+  await syncMempoolMints({ alkaneId: { $in: tokens.map(x => x.alkaneid) } })
+
+  return { syncedAlkanes: successfulAlkanes.length, failedToSync: alkanes.length - successfulAlkanes.length }
+}
+
+async function initialSync(log: Logger, blockHeight: number, rateLimitContext: RateLimitContext) {
+  log.info(`First sync. Performing initial sync.`)
+  const tokens = await getAllAlkaneTokens(rateLimitContext)
+  log.info(`Fetched ${tokens.length} Alkane tokens.`)
+
+  await database.withTransaction(async () => {
+    await database.syncStatus.updateOne(
+      {},
+      { $set: { alkaneSyncBlockHeight: blockHeight } },
+      { upsert: true }
+    )
+
+    if (tokens.length === 0) return
+
+    await database.alkaneToken.bulkWrite(tokens.map(token => {
+      return {
+        updateOne: {
+          filter: { alkaneId: token.alkaneid },
+          update: { $set: mapAlkaneTokenToDbModel(token, { synced: true, initialised: true }) },
+          upsert: true
+        }
+      }
+    }))
+  })
+
+  await syncMempoolMints(null)
+
+  return tokens.length
+}
+
+async function getBlockHeightToSyncTo(lastSyncedBlockHeight: number | null, rateLimitContext: RateLimitContext) {
+  const actualBlockHeight = await getBlockHeight()
+
+  // If we have synced up to the actual block height, then it's not possible for there to be unsynced blocks,
+  // so just return the height we've synced to.
+  if (lastSyncedBlockHeight != null && lastSyncedBlockHeight >= actualBlockHeight) {
+    return actualBlockHeight
+  }
+
+  return await getBestAlkaneBlockHeight(rateLimitContext)
 }
