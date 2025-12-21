@@ -102,7 +102,7 @@ function mockAlkanesById(alkaneTokens: UnisatAlkaneToken[], failedIds: string[] 
     if (failedIds.includes(id) || token == null) {
       return { status: 'rejected', reason: new Error('Failed to fetch id') } as const
     }
-    return { status: 'fulfilled', value: token } as const
+    return { status: 'fulfilled', value: { id: token.alkaneid, exists: true, data: token} } as const
   })))
 }
 

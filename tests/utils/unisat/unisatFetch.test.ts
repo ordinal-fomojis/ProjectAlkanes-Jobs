@@ -51,6 +51,19 @@ describe('unisatFetch', () => {
       .rejects.toThrow('Unisat request to /empty-response failed with message: Success')
   })
 
+  it('should not throw error when data is null is allowNull flag is passed', async () => {
+    vi.mocked(retrySchemaFetch).mockResolvedValueOnce({
+      code: 0,
+      msg: 'Success',
+      data: null
+    })
+
+    const schema = z.object({ balance: z.number() })
+
+    await expect(unisatFetch(schema, '/empty-response', undefined, true))
+      .resolves.toBeNull()
+  })
+
   it('should rate limit to 2.5 requests per second', async () => {
     const testData = { balance: 1000, address: 'bc1qtest...' }
     vi.mocked(retrySchemaFetch).mockResolvedValue({
