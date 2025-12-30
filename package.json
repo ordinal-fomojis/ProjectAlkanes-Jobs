@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@azure/functions": "^4.10.0",
-    "@dotenvx/dotenvx": "^1.51.2",
+    "@dotenvx/dotenvx": "^1.51.4",
     "bitcoinjs-lib": "^7.0.0",
     "js-big-decimal": "^2.2.0",
     "mongodb": "^7.0.0",
@@ -30,12 +30,12 @@
     "cross-env": "^10.1.0",
     "eslint": "^9.39.2",
     "jiti": "^2.6.1",
-    "mongodb-memory-server": "^11.0.0",
+    "mongodb-memory-server": "^11.0.1",
     "plop": "^4.0.4",
     "seedrandom": "^3.0.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.50.0",
+    "typescript-eslint": "^8.51.0",
     "vitest": "^4.0.1",
     "vitest-fetch-mock": "^0.4.5"
   },
