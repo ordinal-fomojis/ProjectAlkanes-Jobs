@@ -22,7 +22,7 @@ export async function callMultiRpc<Output, Input, K extends readonly unknown[]>(
     if (response == null) {
       return { success: false, error: new Error("Failed to retrieve response"), params: param } as const
     }
-    if (response.status == "rejected") {
+    if (response.status === "rejected") {
       const errorMessage = String(response.reason)
       const error = new Error(`Bitcoin RPC error for ${method} with params ${JSON.stringify(param)}: ${errorMessage}`)
       return { success: false, error, params: param } as const
