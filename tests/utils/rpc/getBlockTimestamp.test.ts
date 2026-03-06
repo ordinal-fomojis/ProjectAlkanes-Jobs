@@ -24,12 +24,12 @@ describe('getBlockTimestamp', () => {
     expect(callRpc).toHaveBeenCalledTimes(2)    
     expect(callRpc).toHaveBeenNthCalledWith(1,
       expect.any(z.ZodType),
-      'btc_getblockhash',
+      'getblockhash',
       [blockHeight]
     )
     expect(callRpc).toHaveBeenNthCalledWith(2,
       expect.any(z.ZodType),
-      'btc_getblockheader',
+      'getblockheader',
       [hash]
     )
 

@@ -13,7 +13,7 @@ describe('getMempoolTransactionIds', () => {
 
     const response = await getMempoolTransactionIds()
 
-    expect(callRpc).toHaveBeenCalledWith(expect.any(z.ZodType), 'btc_getrawmempool')
+    expect(callRpc).toHaveBeenCalledWith(expect.any(z.ZodType), 'getrawmempool')
 
     expect(response).toEqual(mockResponse)
   })

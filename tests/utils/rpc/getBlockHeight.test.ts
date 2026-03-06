@@ -12,7 +12,7 @@ describe('getBlockHeight', () => {
 
     const response = await getBlockHeight()
 
-    expect(callRpc).toHaveBeenCalledWith(expect.any(z.ZodType), 'btc_getblockcount')
+    expect(callRpc).toHaveBeenCalledWith(expect.any(z.ZodType), 'getblockcount')
 
     expect(response).toEqual(mockResponse)
   })

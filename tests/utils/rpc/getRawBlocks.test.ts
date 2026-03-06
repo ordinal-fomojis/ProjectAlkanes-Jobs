@@ -49,11 +49,11 @@ describe('getRawBlocks', () => {
     
     expect(callMultiRpc).toHaveBeenNthCalledWith(1,
       expect.any(z.ZodType),
-      blocks.map(({ height }) => ['btc_getblockhash', [height]] as const)
+      blocks.map(({ height }) => ['getblockhash', [height]] as const)
     )
     expect(callMultiRpc).toHaveBeenNthCalledWith(2,
       expect.any(z.ZodType),
-      blocks.map(({ hash }) => ['btc_getblock', [hash, 0]] as const)
+      blocks.map(({ hash }) => ['getblock', [hash, 0]] as const)
     )
 
     expect(result).toHaveLength(2)
@@ -131,11 +131,11 @@ describe('getRawBlocks', () => {
     
     expect(callMultiRpc).toHaveBeenNthCalledWith(1,
       expect.any(z.ZodType),
-      blocks.map(({ height }) => ['btc_getblockhash', [height]] as const)
+      blocks.map(({ height }) => ['getblockhash', [height]] as const)
     )
     expect(callMultiRpc).toHaveBeenNthCalledWith(2,
       expect.any(z.ZodType),
-      blocks.map(({ hash }) => ['btc_getblock', [hash, 0]] as const)
+      blocks.map(({ hash }) => ['getblock', [hash, 0]] as const)
     )
 
     expect(result).toHaveLength(2)
