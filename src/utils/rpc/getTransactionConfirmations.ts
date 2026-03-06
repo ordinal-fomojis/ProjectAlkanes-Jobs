@@ -20,7 +20,7 @@ export async function getTransactionConfirmations(txids: string[]) {
 }
 
 async function getTransactionConfirmationsBase(txids: string[]) {
-  const response = await callMultiRpc(VerboseTxnSchema, txids.map(txid => ['btc_getrawtransaction', [txid, true]] as const))
+  const response = await callMultiRpc(VerboseTxnSchema, txids.map(txid => ['getrawtransaction', [txid, true]] as const))
   return response.map(tx => {
     if (!tx.success) {
       return { txid: tx.params[0], broadcasted: false, confirmations: 0 }

@@ -17,7 +17,7 @@ export async function sendTransactions(txns: SendTransactionsArg[]) {
 }
 
 async function sendTransactionsBase(txns: SendTransactionsArg[]) {
-  const responses = await callMultiRpc(z.string(), txns.map(({ txHex }) => ['btc_sendrawtransaction', [txHex]]))
+  const responses = await callMultiRpc(z.string(), txns.map(({ txHex }) => ['sendrawtransaction', [txHex]]))
 
   return responses.map((response, i) => {
     const txid = txns[i]?.txid

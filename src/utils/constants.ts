@@ -12,8 +12,11 @@ config({
 })
 
 export type BitcoinNetwork = typeof BITCOIN_NETWORK
-export const BITCOIN_NETWORK = parse(z.enum(['mainnet', 'signet', 'testnet'])
+export const BITCOIN_NETWORK = parse(z.enum(['mainnet', 'testnet'])
   .default('mainnet'), process.env.BITCOIN_NETWORK)
+
+export const NOWNODES_API_KEY = parse(
+  z.string({ message: "NOWNODES_API_KEY is missing" }), process.env.NOWNODES_API_KEY)
 
 export const ORDISCAN_API_KEY = parse(
   z.string({ message: "ORDISCAN_API_KEY is missing" }), process.env.ORDISCAN_API_KEY)
@@ -22,9 +25,8 @@ export const UNISAT_API_KEY = parse(
   z.string({ message: "UNISAT_API_KEY is missing" }), process.env.UNISAT_API_KEY)
 
 const BitcoinRpcUrls = {
-  'mainnet': `https://mainnet.subfrost.io/v4/jsonrpc`,
-  'signet': `https://signet.subfrost.io/v4/jsonrpc`,
-  'testnet': `https://testnet.subfrost.io/v4/jsonrpc`
+  'mainnet': `https://btc.nownodes.io`,
+  'testnet': `https://btc-testnet.nownodes.io`
 }
 
 export const BITCOIN_RPC_URL = BitcoinRpcUrls[BITCOIN_NETWORK]

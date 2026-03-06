@@ -16,5 +16,5 @@ export async function getRawTransactions(txids: string[]) {
 }
 
 async function getRawTransactionsBase(txids: string[]) {
-  return await callMultiRpc(z.string(), txids.map(id => ['btc_getrawtransaction', [id]]))
+  return await callMultiRpc(z.string(), txids.map(id => ['getrawtransaction', [id]]))
 }
