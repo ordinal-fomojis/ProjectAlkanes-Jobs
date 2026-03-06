@@ -19,7 +19,7 @@ describe('getRawTransactions', () => {
 
     expect(callMultiRpc).toHaveBeenCalledWith(
       expect.any(z.ZodType),
-      txids.map(id => ['btc_getrawtransaction', [id]])
+      txids.map(id => ['getrawtransaction', [id]])
     )
 
     expect(response).toEqual(mockResponse)

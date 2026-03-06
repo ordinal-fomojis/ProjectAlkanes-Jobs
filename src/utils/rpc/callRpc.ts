@@ -1,8 +1,8 @@
 import { z } from "zod"
-import { BITCOIN_RPC_URL } from "../constants.js"
+import { BITCOIN_RPC_URL, NOWNODES_API_KEY } from "../constants.js"
 import { retrySchemaFetch } from "../retryFetch.js"
 
-export async function callRpc<Output, Input>(schema: z.ZodType<Output, Input>, method: string, params: unknown[] = []) {
+export async function callRpc<Output, Input>(schema: z.ZodType<Output, Input>, method: string, params: readonly unknown[] = []) {
   const rpcSchema = z.object({
     error: z.any().nullish().optional(),
     result: schema.nullish().optional()
@@ -10,12 +10,13 @@ export async function callRpc<Output, Input>(schema: z.ZodType<Output, Input>, m
   const response = await retrySchemaFetch(rpcSchema, BITCOIN_RPC_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      "api-key": NOWNODES_API_KEY
     },
     body: JSON.stringify({
       jsonrpc: "2.0", 
       id: 1, 
-      method: method,
+      method,
       params
     })
   })

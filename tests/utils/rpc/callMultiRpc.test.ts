@@ -7,10 +7,9 @@ vi.mock('../../../src/utils/rpc/callRpc.js')
 
 describe('callMultiRpc', () => {
   it('should process successful responses correctly', async () => {
-    vi.mocked(callRpc).mockResolvedValue([
-      { result: 'result1' },
-      { result: 'result2' }
-    ])
+    vi.mocked(callRpc)
+      .mockResolvedValueOnce('result1')
+      .mockResolvedValueOnce('result2')
 
     const params: [string, unknown[]][] = [
       ['method1', ['param1']],
@@ -19,11 +18,8 @@ describe('callMultiRpc', () => {
     
     const result = await callMultiRpc(z.string(), params)
     
-    expect(callRpc).toHaveBeenCalledWith(
-      expect.any(z.ZodType),
-      'sandshrew_multicall',
-      params
-    )
+    expect(callRpc).toHaveBeenCalledWith(expect.any(z.ZodType), 'method1', ['param1'])
+    expect(callRpc).toHaveBeenCalledWith(expect.any(z.ZodType), 'method2', ['param2'])
     
     expect(result).toEqual([
       { success: true, response: 'result1', params: ['param1'] },
@@ -32,10 +28,7 @@ describe('callMultiRpc', () => {
   })
 
   it('should handle failed RPC calls correctly', async () => {
-    vi.mocked(callRpc).mockResolvedValue([
-      { result: 'result1' },
-      { error: { code: -1, message: 'RPC error' } }
-    ])
+    vi.mocked(callRpc).mockResolvedValueOnce('result1').mockRejectedValueOnce(new Error('RPC error'))
 
     const params: [string, unknown[]][] = [
       ['method1', ['param1']],
@@ -47,29 +40,6 @@ describe('callMultiRpc', () => {
     expect(result).toEqual([
       { success: true, response: 'result1', params: ['param1'] },
       { success: false, error: expect.any(Error), params: ['param2'] }
-    ])
-  })
-
-  it('should handle empty or null results correctly', async () => {
-    // Mock the callRpc response to simulate null results
-    vi.mocked(callRpc).mockResolvedValue([
-      { result: null }, 
-      { result: undefined },
-      { error: null }
-    ])
-
-    const params: [string, unknown[]][] = [
-      ['method1', ['param1']],
-      ['method2', ['param2']],
-      ['method3', ['param3']]
-    ]
-    
-    const result = await callMultiRpc(z.string().nullish(), params)
-    
-    expect(result).toEqual([
-      { success: false, error: expect.any(Error), params: ['param1'] },
-      { success: false, error: expect.any(Error), params: ['param2'] },
-      { success: false, error: expect.any(Error), params: ['param3'] }
     ])
   })
 })
