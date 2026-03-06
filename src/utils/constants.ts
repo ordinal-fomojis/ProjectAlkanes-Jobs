@@ -15,9 +15,6 @@ export type BitcoinNetwork = typeof BITCOIN_NETWORK
 export const BITCOIN_NETWORK = parse(z.enum(['mainnet', 'signet', 'testnet'])
   .default('mainnet'), process.env.BITCOIN_NETWORK)
 
-export const SANDSHREW_API_KEY = parse(
-  z.string({ message: "SANDSHREW_API_KEY is missing" }), process.env.SANDSHREW_API_KEY)
-
 export const ORDISCAN_API_KEY = parse(
   z.string({ message: "ORDISCAN_API_KEY is missing" }), process.env.ORDISCAN_API_KEY)
 
@@ -25,9 +22,9 @@ export const UNISAT_API_KEY = parse(
   z.string({ message: "UNISAT_API_KEY is missing" }), process.env.UNISAT_API_KEY)
 
 const BitcoinRpcUrls = {
-  'mainnet': `https://mainnet.sandshrew.io/v1/${SANDSHREW_API_KEY}`,
-  'signet': `https://signet.sandshrew.io/v1/${SANDSHREW_API_KEY}`,
-  'testnet': `https://testnet.sandshrew.io/v1/${SANDSHREW_API_KEY}`
+  'mainnet': `https://mainnet.subfrost.io/v4/jsonrpc`,
+  'signet': `https://signet.subfrost.io/v4/jsonrpc`,
+  'testnet': `https://testnet.subfrost.io/v4/jsonrpc`
 }
 
 export const BITCOIN_RPC_URL = BitcoinRpcUrls[BITCOIN_NETWORK]

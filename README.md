@@ -75,7 +75,6 @@ func host start
 
 ### Required
 
-- `SANDSHREW_API_KEY`
 - `ORDISCAN_API_KEY`
 - `UNISAT_API_KEY`
 - `MONGODB_URI`
