@@ -75,14 +75,15 @@ func host start
 
 ### Required
 
+- `NOWNODES_API_KEY`
 - `ORDISCAN_API_KEY`
 - `UNISAT_API_KEY`
 - `MONGODB_URI`
 
 ### Common Optional / Defaults
 
-- `MONGODB_DB_NAME` (default from code: `project-alkanes`)
-- `BITCOIN_NETWORK` (`mainnet` | `signet` | `testnet`, default `mainnet`)
+- `MONGODB_DB_NAME` (default from code: `shovel`)
+- `BITCOIN_NETWORK` (`mainnet` | `testnet`, default `mainnet`)
 - `NODE_ENV` (`development`/`production`/`test`)
 
 ### Cron Schedules
