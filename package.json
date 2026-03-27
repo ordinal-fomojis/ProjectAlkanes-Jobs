@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build-tests": "tsc -p tests",
     "watch": "tsc -w",
     "clean": "rm -rf dist",
     "prestart": "npm run clean && npm run build",
