@@ -36,8 +36,8 @@ jobs:
     environment: ${{ inputs.id == '' && 'prod' || 'nonprod' }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-
+      uses: actions/checkout@v6
+  
     - name: Azure CLI Login
       uses: azure/login@v2
       with:
@@ -46,9 +46,9 @@ jobs:
         subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     - name: Setup Node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v6
       with:
-        node-version: '22.x'
+        node-version: '24.x'
 
     - name: Build Project
       run: |
@@ -57,7 +57,7 @@ jobs:
         npm prune --omit=dev
 
     - name: Checkout Terraform
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
       with:
         repository: 'ordinal-fomojis/ProjectAlkanes-IAC'
         path: 'iac'
@@ -68,7 +68,7 @@ jobs:
       with:
         terraform_wrapper: false
 
-    - name: Get Terrform Outputs
+    - name: Get Terraform Outputs
       id: tf-outputs
       run: |
         terraform init -backend-config="key=${{ env.TFSTATE_FILE }}"

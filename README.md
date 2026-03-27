@@ -41,7 +41,7 @@ If a cron env var is missing/empty, that function is not registered.
 
 ## Prerequisites
 
-- Node.js 22.x
+- Node.js 24.x
 - npm
 - Azure Functions Core Tools (`func`)
 - MongoDB instance
