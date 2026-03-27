@@ -10,4 +10,8 @@ updates:
       all:
         patterns:
           - "*"
-
+    ignore:
+      # Typescript 6 is incompatible with @typescript-eslint/eslint-plugin
+      # https://github.com/typescript-eslint/typescript-eslint/issues/12123
+      - dependency-name: typescript
+        versions: [ ">=6.0.0" ]
