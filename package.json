@@ -25,6 +25,7 @@
     "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.5.0",
     "@types/seedrandom": "^3.0.8",
     "@vitest/coverage-istanbul": "^4.1.2",
